@@ -26,7 +26,7 @@ public class Receiver extends Thread {
                 listener.receive(receivePacket);
                 String receivedMessage = new String(receivePacket.getData());
                 //String receivedMessage = new String(receivePacket.getData(), 0, receivePacket.getLength());
-                //communicator.receiveMessage(receivedMessage);
+                communicator.onReceive(receivedMessage);
             }
         } catch (IOException e) {
             e.printStackTrace();

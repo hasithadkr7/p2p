@@ -33,11 +33,11 @@ public class Sender {
             InetAddress ip = InetAddress.getByName(ipAddress);
             DatagramPacket sendPacket = new DatagramPacket(message.getBytes(), message.length(), ip, port);
             clientSocket.send(sendPacket);
-            byte[] buffer = new byte[65536];
-            DatagramPacket receiving_pkt = new DatagramPacket(buffer, buffer.length);
-            clientSocket.receive(receiving_pkt);
-            String received_msg = new String(receiving_pkt.getData(), 0, receiving_pkt.getLength());
-            parseReceiveMessage(received_msg);
+//            byte[] buffer = new byte[65536];
+//            DatagramPacket receiving_pkt = new DatagramPacket(buffer, buffer.length);
+//            clientSocket.receive(receiving_pkt);
+//            String received_msg = new String(receiving_pkt.getData(), 0, receiving_pkt.getLength());
+//            System.out.println("received_msg: "+received_msg);
         } catch (UnknownHostException e) {
             e.printStackTrace();
         } catch (SocketException e) {
@@ -48,43 +48,28 @@ public class Sender {
     }
 
 
-    private void parseReceiveMessage(String message) {
-        System.out.println("Received Message : "+message);
-        int len = message.length();
-        if (message.substring(5, 10).equals("REGOK")) {
-            System.out.println("REGOK : "+message.substring(11, len));
-            String messagePayload = message.substring(11, len);
-            String[] payLoadParts = messagePayload.split(" ");
-        } else if (message.substring(5, 10).equals("UNROK")){
-            System.out.println("UNROK : "+message.substring(11, len));
-            String messagePayload = message.substring(11, len);
-            String[] payLoadParts = messagePayload.split(" ");
-        }else if(message.substring(5,11).equals("JOINOK")){
-            System.out.println("JOINOK : "+message.substring(12,len));
-            String messagePayload = message.substring(12, len);
-            String[] payLoadParts = messagePayload.split(" ");
-        }else if(message.substring(5,9).equals("JOIN")) {
-            System.out.println("JOIN : "+message.substring(10, len));
-            String messagePayload = message.substring(10, len);
-            String[] payLoadParts = messagePayload.split(" ");
-        }else if(message.substring(5,12).equals("LEAVEOK")) {
-            System.out.println("LEAVEOK : "+message.substring(13, len));
-            String messagePayload = message.substring(13, len);
-            String[] payLoadParts = messagePayload.split(" ");
-        }else if(message.substring(5,10).equals("LEAVE")) {
-            System.out.println("LEAVE : "+message.substring(11, len));
-            String messagePayload = message.substring(11, len);
-            String[] payLoadParts = messagePayload.split(" ");
-        }else if(message.substring(5,10).equals("SEROK")){
-            System.out.println("SEROK : "+message.substring(11,len));
-            String messagePayload = message.substring(11, len);
-            String[] payLoadParts = messagePayload.split(" ");
-        }else if(message.substring(5,8).equals("SER")) {
-            System.out.println("SER : "+message.substring(9, len));
-            String messagePayload = message.substring(9, len);
-            String[] payLoadParts = messagePayload.split(" ");
-        }else {
-            System.out.println();
-        }
-    }
+//    public String sendMessage(String ipAddress,int port, String message) {
+//        try {
+//            DatagramSocket clientSocket = new DatagramSocket();
+//            InetAddress ip = InetAddress.getByName(ipAddress);
+//            DatagramPacket sendPacket = new DatagramPacket(message.getBytes(), message.length(), ip, port);
+//            clientSocket.send(sendPacket);
+//            byte[] buffer = new byte[65536];
+//            DatagramPacket receiving_pkt = new DatagramPacket(buffer, buffer.length);
+//            clientSocket.receive(receiving_pkt);
+//            String received_msg = new String(receiving_pkt.getData(), 0, receiving_pkt.getLength());
+//            System.out.println("received_msg: "+received_msg);
+//            return received_msg;
+//        } catch (UnknownHostException e) {
+//            e.printStackTrace();
+//        } catch (SocketException e) {
+//            e.printStackTrace();
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
+//        return null;
+//    }
+
+
+
 }
