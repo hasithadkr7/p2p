@@ -57,34 +57,44 @@ public class PeerNode{
                         System.out.println("REGOK : "+receivedMessage.substring(11, len));
                         String messagePayload = receivedMessage.substring(11, len);
                         String[] payLoadParts = messagePayload.split(" ");
-                        if (payLoadParts[0]=="1" || payLoadParts[0].equals("1")){
-                            Node node = new Node(payLoadParts[1],Integer.parseInt(payLoadParts[2]));
-                            routingTable.add(node);
-                            System.out.println("registerRequest|routingTable.size(): "+routingTable.size());
-                        }else if (payLoadParts[0]=="2" || payLoadParts[0].equals("2")){
-                            Node node1 = new Node(payLoadParts[1],Integer.parseInt(payLoadParts[2]));
-                            Node node2 = new Node(payLoadParts[3],Integer.parseInt(payLoadParts[4]));
-                            routingTable.add(node1);
-                            routingTable.add(node2);
-                            System.out.println("registerRequest|routingTable.size(): "+routingTable.size());
-                        }
                         String join_request_message_tmp = " JOIN " + nodeSelf.ip + " " + nodeSelf.port;
                         String join_request_message = String.format("%04d", join_request_message_tmp.length() + 4)+join_request_message_tmp;
                         System.out.println("join_request_message: "+join_request_message);
-                        for (int i = 0; i < routingTable.size(); i++) {
-                            Node neighbour = routingTable.get(i);
-                            InetAddress ip = InetAddress.getByName(neighbour.ip);
-                            DatagramPacket sendPacket = new DatagramPacket(join_request_message.getBytes(), join_request_message.length(),ip,neighbour.port);
+                        if (payLoadParts[0]=="1" || payLoadParts[0].equals("1")){
+                            Node node = new Node(payLoadParts[1],Integer.parseInt(payLoadParts[2]));
+                            InetAddress ip = InetAddress.getByName(node.ip);
+                            DatagramPacket sendPacket = new DatagramPacket(join_request_message.getBytes(), join_request_message.length(),ip,node.port);
                             listenerSocket.send(sendPacket);
+                            routingTable.add(node);
+                        }else if (payLoadParts[0]=="2" || payLoadParts[0].equals("2")){
+                            Node node1 = new Node(payLoadParts[1],Integer.parseInt(payLoadParts[2]));
+                            InetAddress ip = InetAddress.getByName(node1.ip);
+                            DatagramPacket sendPacket = new DatagramPacket(join_request_message.getBytes(), join_request_message.length(),ip,node1.port);
+                            listenerSocket.send(sendPacket);
+                            Node node2 = new Node(payLoadParts[3],Integer.parseInt(payLoadParts[4]));
+                            InetAddress ip1 = InetAddress.getByName(node2.ip);
+                            DatagramPacket sendPacket1 = new DatagramPacket(join_request_message.getBytes(), join_request_message.length(),ip1,node2.port);
+                            listenerSocket.send(sendPacket1);
+                            routingTable.add(node1);
+                            routingTable.add(node2);
                         }
                     } else if (receivedMessage.substring(5, 10).equals("UNROK")){
                         System.out.println("UNROK : "+receivedMessage.substring(11, len));
                         String messagePayload = receivedMessage.substring(11, len);
                         String[] payLoadParts = messagePayload.split(" ");
+                        if (payLoadParts[0]=="0" || payLoadParts[0].equals("0")){
+                            String leaveRequestMessageTmp = " LEAVE " + nodeSelf.ip + " " + nodeSelf.port;
+                            String leaveRequestMessage = String.format("%04d", leaveRequestMessageTmp.length() + 4)+leaveRequestMessageTmp;
+                            System.out.println("leaveRequestMessage: "+leaveRequestMessage);
+                            for (int i = 0; i < routingTable.size(); i++) {
+                                Node neighbour = routingTable.get(i);
+                                InetAddress ip = InetAddress.getByName(neighbour.ip);
+                                DatagramPacket sendPacket = new DatagramPacket(leaveRequestMessage.getBytes(), leaveRequestMessage.length(),ip,neighbour.port);
+                                listenerSocket.send(sendPacket);
+                            }
+                        }
                     }else if(receivedMessage.substring(5,11).equals("JOINOK")){
                         System.out.println("JOINOK : "+receivedMessage.substring(12,len));
-                        String messagePayload = receivedMessage.substring(12, len);
-                        String[] payLoadParts = messagePayload.split(" ");
                     }else if(receivedMessage.substring(5,9).equals("JOIN")) {
                         System.out.println("JOIN : "+receivedMessage.substring(10, len));
                         String messagePayload = receivedMessage.substring(10, len);
@@ -106,12 +116,25 @@ public class PeerNode{
                         listenerSocket.send(sendPacket);
                     }else if(receivedMessage.substring(5,12).equals("LEAVEOK")) {
                         System.out.println("LEAVEOK : "+receivedMessage.substring(13, len));
-                        String messagePayload = receivedMessage.substring(13, len);
-                        String[] payLoadParts = messagePayload.split(" ");
                     }else if(receivedMessage.substring(5,10).equals("LEAVE")) {
                         System.out.println("LEAVE : "+receivedMessage.substring(11, len));
                         String messagePayload = receivedMessage.substring(11, len);
                         String[] payLoadParts = messagePayload.split(" ");
+                        String leaveOkMessageTmp = "";
+                        Node node = null;
+                        if (payLoadParts.length==2){
+                            node = new Node(payLoadParts[0],formatNumber(payLoadParts[1]));
+                            if (!routingTable.contains(node)){
+                                routingTable.remove(node);
+                            }
+                            leaveOkMessageTmp = " LEAVEOK 0";
+                        }else {
+                            leaveOkMessageTmp = " LEAVEOK 9999";
+                        }
+                        String leaveOkMessage = String.format("%04d", leaveOkMessageTmp.length() + 4)+ leaveOkMessageTmp;
+                        System.out.println("parseReceiveMessage|node.toString(): "+node.toString());
+                        DatagramPacket sendPacket = new DatagramPacket(leaveOkMessage.getBytes(), leaveOkMessage.length(),receivePacket.getAddress(),receivePacket.getPort());
+                        listenerSocket.send(sendPacket);
                     }else if(receivedMessage.substring(5,10).equals("SEROK")){
                         System.out.println("SEROK : "+receivedMessage.substring(11,len));
                         String messagePayload = receivedMessage.substring(11, len);
