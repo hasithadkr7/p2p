@@ -11,6 +11,7 @@ public class PeerNode{
     Node nodeSelf;
     Communicator communicator;
     DatagramSocket listenerSocket = null;
+    HashMap<Integer,String> previousQueries = new HashMap<Integer, String>();
 
 
     public PeerNode(String my_ip, int my_port, String my_username) {
@@ -24,6 +25,7 @@ public class PeerNode{
             communicator = new Communicator(this);
             myFiles = InitConfig.getRandomFiles();
             initFileMap();
+            getFilesList();
             listen();
         } catch (SocketException e) {
             e.printStackTrace();
@@ -137,12 +139,56 @@ public class PeerNode{
                         listenerSocket.send(sendPacket);
                     }else if(receivedMessage.substring(5,10).equals("SEROK")){
                         System.out.println("SEROK : "+receivedMessage.substring(11,len));
-                        String messagePayload = receivedMessage.substring(11, len);
-                        String[] payLoadParts = messagePayload.split(" ");
                     }else if(receivedMessage.substring(5,8).equals("SER")) {
                         System.out.println("SER : "+receivedMessage.substring(9, len));
                         String messagePayload = receivedMessage.substring(9, len);
-                        String[] payLoadParts = messagePayload.split(" ");
+                        System.out.println("messagePayload : "+messagePayload);
+                        String searchQuery = messagePayload.substring(0,messagePayload.length()-3);
+                        System.out.println("searchQuery : "+searchQuery);
+                        String[] searchParts = searchQuery.split("\"");
+                        String searchName = searchParts[1];
+                        System.out.println("searchName : "+searchName);
+
+                        String hopsCountStr = messagePayload.substring(messagePayload.length()-3,
+                                messagePayload.length()).trim().replaceAll("\\r|\\n", "");
+                        System.out.println("hopsCountStr : |"+hopsCountStr+"|");
+
+                        int hopCount = Integer.parseInt(hopsCountStr);
+
+                        ArrayList<String> findings = findFileInList(searchName,this.myFiles);
+                        System.out.println("findings : "+findings.toString());
+                        if (findings.isEmpty()){
+                            System.out.println("previousQueries : "+this.previousQueries.toString());
+                            System.out.println("searchQuery.hashCode : "+searchQuery.hashCode());
+                            System.out.println("this.previousQueries.containsKey(searchQuery.hashCode()) : "
+                                    +this.previousQueries.containsKey(searchQuery.hashCode()));
+                            if (!this.previousQueries.containsKey(searchQuery.hashCode())){
+                                System.out.println("First time broadcasted query : "+searchQuery);
+                                this.previousQueries.put(searchQuery.hashCode(),searchQuery);
+                                int nweHopCount = hopCount + 1;
+                                String newQueryMessageTmp = " SER "+searchQuery+" "+String.format("%02d", nweHopCount);
+                                String newQueryMessage = String.format("%04d", newQueryMessageTmp.length() + 4)+ newQueryMessageTmp;
+                                broadCast(listenerSocket,newQueryMessage,this.routingTable);
+                            }else {
+                                System.out.println("Previously broadcasted query : "+searchQuery);
+                            }
+                        }else {
+                            if (!this.previousQueries.containsKey(searchQuery.hashCode())){
+                                String findingsStr = String.join(" ", findings);
+                                //length SEROK no_files IP port hops filename1 filename2
+                                String searchOkMessageTmp = " SEROK "+findings.size()+" "+this.nodeSelf.ip+" "+this.nodeSelf.port
+                                        +" "+hopsCountStr+" "+findingsStr;
+                                String searchOkMessage = String.format("%04d", searchOkMessageTmp.length() + 4)+ searchOkMessageTmp;
+                                //0047 SER 129.82.62.142 5070 "Lord of the rings"
+                                String[] senderInfo = searchParts[0].split(" ");
+                                InetAddress ip = InetAddress.getByName(senderInfo[0]);
+                                DatagramPacket sendPacket = new DatagramPacket(searchOkMessage.getBytes(),
+                                        searchOkMessage.length(),ip,Integer.parseInt(senderInfo[1]));
+                                listenerSocket.send(sendPacket);
+                            }else {
+                                System.out.println("Search result for query : "+searchQuery);
+                            }
+                        }
                     }else {
                         System.out.println("Unmactched Message : "+receivedMessage);
                     }
@@ -153,6 +199,43 @@ public class PeerNode{
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    private void broadCast(DatagramSocket listenerSocket, String message, ArrayList<Node> routingTable){
+        for (int i = 0; i < routingTable.size(); i++) {
+            Node neighbour = routingTable.get(i);
+            InetAddress ip = null;
+            try {
+                ip = InetAddress.getByName(neighbour.ip);
+                DatagramPacket sendPacket = new DatagramPacket(message.getBytes(), message.length(),ip,neighbour.port);
+                listenerSocket.send(sendPacket);
+            } catch (UnknownHostException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private ArrayList<String> findFileInList(String queryName,String[] fileList){
+        ArrayList<String> findings = new ArrayList<String>();
+        for(String fileName: fileList){
+            if (fileName.contains(queryName)){
+                int similarityCount = 0;
+                String[] queryWords = queryName.split(" ");
+                for(String queryWord: queryWords){
+                    for(String fileWord:fileName.split(" ")){
+                        if (queryWord.equals(fileWord)){
+                            similarityCount++;
+                        }
+                    }
+                }
+                if (similarityCount==queryWords.length){
+                    findings.add(fileName);
+                }
+            }
+        }
+        return findings;
     }
 
 
@@ -167,6 +250,20 @@ public class PeerNode{
         byte[] bytes = whatever.getBytes();
         String str = new String(bytes, Charset.forName("UTF-8"));
         return Integer.parseInt(str);
+    }
+
+    public void searchQuery(String query){
+        ArrayList<String> findings = findFileInList(query, this.myFiles);
+        if (!findings.isEmpty()){
+            for (String fileName:findings){
+                System.out.println("File name: "+fileName);
+            }
+        }else {
+            //0047 SER 129.82.62.142 5070 "Lord of the rings" 00
+            String searchReqeustTmp = " SER "+this.nodeSelf.ip+" "+this.nodeSelf.port+" \""+query+"\" 00";
+            String searchReqeust = String.format("%04d", searchReqeustTmp.length() + 4)+ searchReqeustTmp;
+            broadCast(this.listenerSocket, searchReqeust, this.routingTable);
+        }
     }
 
     public void getFilesList() {
