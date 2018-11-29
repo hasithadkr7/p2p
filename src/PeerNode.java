@@ -22,7 +22,7 @@ public class PeerNode{
             listenerSocket = new DatagramSocket(my_port);
             routingTable = new ArrayList<Node>();
             fileListMap = new HashMap<String, Node>();
-            communicator = new Communicator(this);
+            //communicator = new Communicator(this);
             myFiles = InitConfig.getRandomFiles();
             initFileMap();
             getFilesList();
@@ -53,7 +53,7 @@ public class PeerNode{
                 byte[] data = receivePacket.getData();
                 String receivedMessage = new String(data, 0, receivePacket.getLength());
                 System.out.println("listen|port: "+nodeSelf.port+"|receivedMessage : "+receivedMessage);
-                if (receivedMessage !=null){
+                if (receivedMessage !=null && receivedMessage.length()>5){
                     int len = receivedMessage.length();
                     if (receivedMessage.substring(5, 10).equals("REGOK")) {
                         System.out.println("REGOK : "+receivedMessage.substring(11, len));
@@ -140,6 +140,7 @@ public class PeerNode{
                     }else if(receivedMessage.substring(5,10).equals("SEROK")){
                         System.out.println("SEROK : "+receivedMessage.substring(11,len));
                     }else if(receivedMessage.substring(5,8).equals("SER")) {
+                        this.getPreviousQueries();
                         System.out.println("SER : "+receivedMessage.substring(9, len));
                         String messagePayload = receivedMessage.substring(9, len);
                         System.out.println("messagePayload : "+messagePayload);
@@ -189,6 +190,12 @@ public class PeerNode{
                                 System.out.println("Search result for query : "+searchQuery);
                             }
                         }
+                    }else if(receivedMessage.substring(5,7).equals("RT")){
+                        this.getRountingTable();
+                    }else if(receivedMessage.substring(5,7).equals("FL")){
+                        this.getFilesList();
+                    }else if(receivedMessage.substring(5,7).equals("PQ")){
+                        this.getPreviousQueries();
                     }else {
                         System.out.println("Unmactched Message : "+receivedMessage);
                     }
@@ -272,9 +279,17 @@ public class PeerNode{
         System.out.println("----------------------------------------------------------------------------");
         System.out.println("");
     }
+
     public void getRountingTable() {
         System.out.println("----------------------------------------------------------------------------");
         System.out.println(routingTable.toString());
+        System.out.println("----------------------------------------------------------------------------");
+        System.out.println("");
+    }
+
+    public void getPreviousQueries() {
+        System.out.println("----------------------------------------------------------------------------");
+        System.out.println(previousQueries.toString());
         System.out.println("----------------------------------------------------------------------------");
         System.out.println("");
     }
