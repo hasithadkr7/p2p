@@ -9,7 +9,6 @@ public class PeerNode{
     HashMap<String, Node> fileListMap;
     String[] myFiles;
     Node nodeSelf;
-    Communicator communicator;
     DatagramSocket listenerSocket = null;
     HashMap<Integer,String> previousQueries = new HashMap<Integer, String>();
 
@@ -294,31 +293,4 @@ public class PeerNode{
         System.out.println("");
     }
 
-}
-
-class Node {
-    public String ip;
-    public int port;
-    public String userName;
-
-    public Node(String ip, int port) {
-        this.ip = ip;
-        this.port = port;
-    }
-
-    public void setUserName(String userName){
-        this.userName = userName;
-    }
-
-    public String getUserName(){
-        return this.userName;
-    }
-
-    @Override
-    public String toString() {
-        return "Node{" +
-                "ip='" + ip + '\'' +
-                ", port=" + port +
-                '}';
-    }
 }
