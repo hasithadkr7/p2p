@@ -12,12 +12,14 @@ public class PeerNodeNew{
     Node nodeSelf;
     DatagramSocket listenerSocket = null;
     HashMap<Integer, String> previousQueries = new HashMap<Integer, String>();
+    //HashMap<String, ArrayList<HashMap<Node, Integer>>> fileRanks = new HashMap<String, ArrayList<HashMap<Node, Integer>>>();
+    HashMap<String, HashMap<Node, Integer>> fileRanks = new HashMap<String, HashMap<Node, Integer>>();
     private int leaveRequestCount = 0;
 
 
     public PeerNodeNew(String my_ip, int my_port, String my_username) {
         nodeSelf = new Node(my_ip, my_port);
-        nodeSelf.setUserName(my_username);
+        //nodeSelf.setUserName(my_username);
         try {
             listenerSocket = new DatagramSocket(my_port);
             routingTable = new ArrayList<Node>();
@@ -146,6 +148,15 @@ public class PeerNodeNew{
                                 System.out.println("Error|Result: "+receivedMessage);
                             }
                         }
+                        else if(command.equals("FILE_RANK") && st.hasMoreTokens()){
+                            StringTokenizer tokens = new StringTokenizer(receivedMessage, "|");
+                            tokens.nextToken();
+                            String fileName = st.nextToken().trim();
+                            int rank = Integer.parseInt(st.nextToken().trim());
+                            String ip = st.nextToken().trim();
+                            int port = Integer.parseInt(st.nextToken().trim());
+
+                        }
                         getRountingTable();
                         getFilesList();
                         getPreviousQueries();
@@ -161,119 +172,6 @@ public class PeerNodeNew{
         }).start();
     }
 
-/*
-    public void listen(){
-        try {
-            while (true) {
-                System.out.println("Waiting for Incomming...");
-                byte[] buffer = new byte[65536];
-                DatagramPacket receivePacket = new DatagramPacket(buffer, buffer.length);
-                listenerSocket.receive(receivePacket);
-                byte[] data = receivePacket.getData();
-                String receivedMessage = new String(data, 0, receivePacket.getLength());
-                System.out.println("listen|port: "+nodeSelf.port+"|receivedMessage : "+receivedMessage);
-
-                StringTokenizer st = new StringTokenizer(receivedMessage, " ");
-                String length = st.nextToken();
-                String command = st.nextToken().trim();
-                System.out.println("command : "+command);
-                if (command.equals("REGOK")) {
-                    //0051 REGOK 2 129.82.123.45 5001 64.12.123.190 34001
-                    int peerCount = Integer.parseInt(st.nextToken());
-                    System.out.println("peerCount : "+peerCount);
-                    if (peerCount==1){
-                        String ip = st.nextToken();
-                        int port = Integer.parseInt(st.nextToken().trim());
-                        Node node = new Node(ip,port);
-                        this.routingTable.add(node);
-                        sendJoinRequest(node);
-                    }
-                    else if (peerCount==2){
-                        String ip1 = st.nextToken();
-                        int port1 = Integer.parseInt(st.nextToken().trim());
-                        Node node1 = new Node(ip1,port1);
-                        this.routingTable.add(node1);
-                        sendJoinRequest(node1);
-                        String ip2 = st.nextToken();
-                        int port2 = Integer.parseInt(st.nextToken().trim());
-                        Node node2 = new Node(ip2,port2);
-                        this.routingTable.add(node2);
-                        sendJoinRequest(node2);
-                    }
-                }
-                else if(command.equals("JOIN") && st.hasMoreTokens()){
-                    //0027 JOIN 64.12.123.190 432
-                    String ip = st.nextToken();
-                    int port = Integer.parseInt(st.nextToken().trim());
-                    Node node = new Node(ip,port);
-                    boolean success = false;
-                    if (!this.routingTable.contains(node)){
-                        try {
-                            this.routingTable.add(node);
-                            success = true;
-                        }catch (Exception e){
-                            e.printStackTrace();
-                        }
-                    }
-                    sendJoinOk(node, success);
-                }
-                else if(command.equals("JOINOK") && st.hasMoreTokens()){
-                    //0014 JOINOK 0
-                    int result = Integer.parseInt(st.nextToken().trim());
-                    if (result==0){
-                        System.out.println("0 – successful");
-                    }else if (result==9999){
-                        System.out.println("9999 – error while adding new node to routing table");
-                    }
-                }
-                else if(command.equals("LEAVEOK") && st.hasMoreTokens()){
-                    //0014 LEAVEOK 0
-                    int result = Integer.parseInt(st.nextToken().trim());
-                    if (result==0){
-                        System.out.println("Node successfully leaves the distributed system.");
-                    }else if (leaveRequestCount<2){
-                        TimeUnit.SECONDS.sleep(1);
-                        leaveRequest();
-                    }
-                }
-                else if(command.equals("SER") && st.hasMoreTokens()){
-                    //0047 SER 129.82.62.142 5070 "Lord of the rings" 2
-                    String ip = st.nextToken();
-                    int port = Integer.parseInt(st.nextToken().trim());
-                    Node node = new Node(ip,port);
-                    StringTokenizer st1 = new StringTokenizer(receivedMessage, "\"");
-                    st1.nextToken().trim();
-                    String searchQuery = st1.nextToken().trim();
-                    int hopCount = Integer.parseInt(st1.nextToken().trim());
-                    int searchKey = getHashKey(node,searchQuery);
-                    if (!previousQueries.containsKey(searchKey)){
-                        ArrayList<String> findings = findFileInList(searchQuery,this.filesList);
-                        if (findings.isEmpty()){
-                            //Forward search query.
-                            forwardSearchQuery(node,searchQuery,hopCount);
-                        }else {
-                            //send search ok
-                            sendSearchOk(findings,hopCount,node);
-                        }
-                        previousQueries.put(searchKey,searchQuery);
-                    }else {
-                        System.out.println("Previously searched query.");
-                    }
-                }
-                else if(command.equals("SEROK") && st.hasMoreTokens()){
-                    //0114 SEROK 3 129.82.128.1 2301 baby_go_home.mp3 baby_come_back.mp3 baby.mpeg
-                }
-            }
-        } catch (SocketException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-    }
-*/
-
     public void searchFileQuery(String searchQuery){
         ArrayList<String> findings = findFileInList(searchQuery,this.filesList);
         if (findings.isEmpty()){
@@ -281,6 +179,62 @@ public class PeerNodeNew{
             forwardSearchQuery(this.nodeSelf,searchQuery,0);
         }else {
             System.out.println("Files : "+findings.toString());
+        }
+    }
+    
+    public void rankFile(String fileName, int rank){
+        //<<length>>|FILE_RANK|<<file_id>>|<<rank>>|<<timestamp>>|<<node_id>>
+        //HashMap<String,HashMap<String, Integer>>
+        HashMap<Node, Integer> rankMap;
+        if (fileRanks.containsKey(fileName)){
+            rankMap = fileRanks.get(fileName);
+            if (rankMap.containsKey(nodeSelf)){
+                rankMap.replace(nodeSelf,rank);
+            }else {
+                rankMap.put(nodeSelf,rank);
+            }
+        }else {
+            //Add to list
+            rankMap = new HashMap<Node, Integer>();
+            rankMap.put(nodeSelf,rank);
+        }
+        fileRanks.replace(fileName,rankMap);
+        String rankFileMessageTmp = " FILE_RANK |"+fileName+"|"+rank+"|"+nodeSelf.ip+"|"+nodeSelf.port;
+        //0034 FILE_RANK |hello world.mp4|2|132.43.12.43|45231
+        String rankFileMessage = String.format("%04d", rankFileMessageTmp.length() + 4)+rankFileMessageTmp;
+        System.out.println("rankFileMessage: "+rankFileMessage);
+        forwardRankMessage(rankFileMessage);
+    }
+
+    private void updateRanks(String fileName, int rank, Node node){
+        HashMap<Node, Integer> rankMap;
+        if (fileRanks.containsKey(fileName)){
+            rankMap = fileRanks.get(fileName);
+            if (rankMap.containsKey(node)){
+                rankMap.replace(node,rank);
+            }else {
+                rankMap.put(node,rank);
+            }
+        }else {
+            //Add to list
+            rankMap = new HashMap<Node, Integer>();
+            rankMap.put(node,rank);
+        }
+        fileRanks.replace(fileName,rankMap);
+    }
+
+    private void forwardRankMessage(String rankFileMessage){
+        for (int i = 0; i < this.routingTable.size(); i++) {
+            Node neighbour = this.routingTable.get(i);
+            try {
+                InetAddress ip = InetAddress.getByName(neighbour.ip);
+                DatagramPacket sendPacket = new DatagramPacket(rankFileMessage.getBytes(), rankFileMessage.length(),ip,neighbour.port);
+                listenerSocket.send(sendPacket);
+            } catch (UnknownHostException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 
