@@ -12,6 +12,7 @@ public class PeerNodeNew{
     Node nodeSelf;
     DatagramSocket listenerSocket = null;
     HashMap<Integer, String> previousQueries = new HashMap<Integer, String>();
+    HashMap<Integer, String> previousRankings = new HashMap<Integer, String>();
     //HashMap<String, ArrayList<HashMap<Node, Integer>>> fileRanks = new HashMap<String, ArrayList<HashMap<Node, Integer>>>();
     HashMap<String, HashMap<Node, Integer>> fileRanks = new HashMap<String, HashMap<Node, Integer>>();
     private int leaveRequestCount = 0;
@@ -151,15 +152,22 @@ public class PeerNodeNew{
                         else if(command.equals("FILE_RANK") && st.hasMoreTokens()){
                             StringTokenizer tokens = new StringTokenizer(receivedMessage, "|");
                             tokens.nextToken();
-                            String fileName = st.nextToken().trim();
-                            int rank = Integer.parseInt(st.nextToken().trim());
-                            String ip = st.nextToken().trim();
-                            int port = Integer.parseInt(st.nextToken().trim());
-
+                            String fileName = tokens.nextToken().trim();
+                            int rank = Integer.parseInt(tokens.nextToken().trim());
+                            String ip = tokens.nextToken().trim();
+                            int port = Integer.parseInt(tokens.nextToken().trim());
+                            int rankKey = getRankHashKey(new Node(ip,port),fileName,rank);
+                            if (!previousRankings.containsKey(rankKey)){
+                                updateRanks(fileName,rank, new Node(ip,port));
+                                previousRankings.put(rankKey,fileName);
+                            }else {
+                                System.out.println("Ignoring|Duplicate ranking.");
+                            }
                         }
                         getRountingTable();
                         getFilesList();
                         getPreviousQueries();
+                        getFileRanks();
                     }
                 } catch (SocketException e) {
                     e.printStackTrace();
@@ -183,44 +191,39 @@ public class PeerNodeNew{
     }
     
     public void rankFile(String fileName, int rank){
-        //<<length>>|FILE_RANK|<<file_id>>|<<rank>>|<<timestamp>>|<<node_id>>
-        //HashMap<String,HashMap<String, Integer>>
-        HashMap<Node, Integer> rankMap;
-        if (fileRanks.containsKey(fileName)){
-            rankMap = fileRanks.get(fileName);
-            if (rankMap.containsKey(nodeSelf)){
-                rankMap.replace(nodeSelf,rank);
-            }else {
-                rankMap.put(nodeSelf,rank);
-            }
-        }else {
-            //Add to list
-            rankMap = new HashMap<Node, Integer>();
-            rankMap.put(nodeSelf,rank);
-        }
-        fileRanks.replace(fileName,rankMap);
-        String rankFileMessageTmp = " FILE_RANK |"+fileName+"|"+rank+"|"+nodeSelf.ip+"|"+nodeSelf.port;
-        //0034 FILE_RANK |hello world.mp4|2|132.43.12.43|45231
-        String rankFileMessage = String.format("%04d", rankFileMessageTmp.length() + 4)+rankFileMessageTmp;
-        System.out.println("rankFileMessage: "+rankFileMessage);
-        forwardRankMessage(rankFileMessage);
+        updateRanks(fileName,rank, nodeSelf);
     }
 
     private void updateRanks(String fileName, int rank, Node node){
+        //<<length>>|FILE_RANK|<<file_id>>|<<rank>>|<<timestamp>>|<<node_id>>
+        //HashMap<String,HashMap<String, Integer>>
+        System.out.println("updateRanks: "+fileName+" rank:"+rank+" node:"+node.toString());
         HashMap<Node, Integer> rankMap;
+        this.getFileRanks();
         if (fileRanks.containsKey(fileName)){
+            System.out.println("Existing.");
             rankMap = fileRanks.get(fileName);
             if (rankMap.containsKey(node)){
+                System.out.println("----Existing.");
                 rankMap.replace(node,rank);
             }else {
+                System.out.println("----New file.");
                 rankMap.put(node,rank);
             }
+            fileRanks.replace(fileName,rankMap);
         }else {
-            //Add to list
+            System.out.println("New file.");
             rankMap = new HashMap<Node, Integer>();
             rankMap.put(node,rank);
+            fileRanks.put(fileName,rankMap);
         }
-        fileRanks.replace(fileName,rankMap);
+        String rankFileMessageTmp = " FILE_RANK |"+fileName+"|"+rank+"|"+node.ip+"|"+node.port;
+        //0034 FILE_RANK |hello world.mp4|2|132.43.12.43|45231
+        String rankFileMessage = String.format("%04d", rankFileMessageTmp.length() + 4)+rankFileMessageTmp;
+        System.out.println("rankFileMessage: "+rankFileMessage);
+        int rankKey = getRankHashKey(node,fileName,rank);
+        previousRankings.put(rankKey,fileName);
+        forwardRankMessage(rankFileMessage);
     }
 
     private void forwardRankMessage(String rankFileMessage){
@@ -240,6 +243,11 @@ public class PeerNodeNew{
 
     private int getHashKey(Node node, String searchQuery){
         String fullStr = node.toString()+"|"+searchQuery;
+        return fullStr.hashCode();
+    }
+
+    private int getRankHashKey(Node node, String fileName,int rank){
+        String fullStr = node.toString()+"|"+fileName+"|"+rank;
         return fullStr.hashCode();
     }
 
@@ -405,7 +413,20 @@ public class PeerNodeNew{
         System.out.println(previousQueries.toString());
         previousQueries.values().stream().map(Object::toString).collect(Collectors.joining(","));
         System.out.println("----------------------------------------------------------------------------");
-        System.out.println("");
+    }
+
+    public void getFileRanks() {
+        System.out.println("----------------------------------------------------------------------------");
+        System.out.println(fileRanks.toString());
+        fileRanks.values().stream().map(Object::toString).collect(Collectors.joining(","));
+        System.out.println("----------------------------------------------------------------------------");
+    }
+
+    public void printRankMap(HashMap<Node, Integer> rankMap) {
+        System.out.println("----------------------------------------------------------------------------");
+        System.out.println(rankMap.toString());
+        rankMap.values().stream().map(Object::toString).collect(Collectors.joining(","));
+        System.out.println("----------------------------------------------------------------------------");
     }
 
 }

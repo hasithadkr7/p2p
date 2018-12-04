@@ -3,9 +3,8 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class StartNode {
     public static void main(String[] args) {
-        int port = ThreadLocalRandom.current().nextInt(1000, 50000);
+        int port = ThreadLocalRandom.current().nextInt(1050, 50000);
         PeerNodeNew node = new PeerNodeNew("127.0.0.1",port,"node" + port);
-
         Scanner in = new Scanner(System.in);
         while(true) {
             System.out.println("What you want to do?");
@@ -17,23 +16,65 @@ public class StartNode {
             System.out.println("6. Rank a file.");
             System.out.println("7. Summary of files with ranks.");
 
-            if (in.nextLine().equals("1")) {
-                System.out.println("Enter Search Query :");
-                String query = in.nextLine();
-                node.searchFileQuery(query);
+            int selection = Integer.parseInt(in.nextLine().trim());
+            switch (selection){
+                case 1:
+                    System.out.println("Enter Search Query :");
+                    String query = in.nextLine();
+                    node.searchFileQuery(query);
+                    break;
+                case 2:
+                    System.out.println("Print File Names for a node.");
+                    node.getFilesList();
+                    break;
+                case 3:
+                    System.out.println("Print Routing table for a node.");
+                    node.getRountingTable();
+                    break;
+                case 4:
+                    System.out.println("Previous queries.");
+                    node.getPreviousQueries();
+                    break;
+                case 5:
+                    break;
+                case 6:
+                    System.out.println("Enter file name: ");
+                    String fileName = in.nextLine();
+                    System.out.println("fileName:"+fileName);
+                    System.out.println("Enter rank: ");
+                    int rank = Integer.parseInt(in.nextLine().trim());
+                    System.out.println("Rank:"+rank);
+                    node.rankFile(fileName,rank);
+                    break;
+                case 7:
+                    break;
+                default:
+                    System.out.println("No matching input.");
             }
-            if (in.nextLine().equals("2")) {
-                System.out.println("Print File Names for a node.");
-                node.getFilesList();
-            }
-            if (in.nextLine().equals("3")) {
-                System.out.println("Print Routing table for a node.");
-                node.getRountingTable();
-            }
-            if (in.nextLine().equals("4")) {
-                System.out.println("Previous queries.");
-                node.getPreviousQueries();
-            }
+//            if (selection==1) {
+//                System.out.println("Enter Search Query :");
+//                String query = in.nextLine();
+//                node.searchFileQuery(query);
+//            }
+//            if (selection==2) {
+//                System.out.println("Print File Names for a node.");
+//                node.getFilesList();
+//            }
+//            if (selection==3) {
+//                System.out.println("Print Routing table for a node.");
+//                node.getRountingTable();
+//            }
+//            if (selection==4) {
+//                System.out.println("Previous queries.");
+//                node.getPreviousQueries();
+//            }
+//            if (selection==6) {
+//                System.out.println("Rank file. Enter file name: ");
+//                String fileName = in.nextLine();
+//                System.out.println("Rank file. Enter file rank: ");
+//                int rank = in.nextInt();
+//                node.rankFile(fileName,rank);
+//            }
         }
     }
 }
