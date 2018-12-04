@@ -12,9 +12,8 @@ public class StartNode {
             System.out.println("2. Print File Names for a node.");
             System.out.println("3. Print Routing table for a node.");
             System.out.println("4. Previous queries.");
-            System.out.println("5. Comment on a File.");
-            System.out.println("6. Rank a file.");
-            System.out.println("7. Summary of files with ranks.");
+            System.out.println("5. Rank a file.");
+            System.out.println("6. Get file rank.");
 
             int selection = Integer.parseInt(in.nextLine().trim());
             switch (selection){
@@ -36,8 +35,6 @@ public class StartNode {
                     node.getPreviousQueries();
                     break;
                 case 5:
-                    break;
-                case 6:
                     System.out.println("Enter file name: ");
                     String fileName = in.nextLine();
                     System.out.println("fileName:"+fileName);
@@ -46,35 +43,15 @@ public class StartNode {
                     System.out.println("Rank:"+rank);
                     node.rankFile(fileName,rank);
                     break;
-                case 7:
+                case 6:
+                    System.out.println("Enter file name: ");
+                    String queryName = in.nextLine();
+                    System.out.println("queryName:"+queryName);
+                    node.getFileRank(queryName);
                     break;
                 default:
                     System.out.println("No matching input.");
             }
-//            if (selection==1) {
-//                System.out.println("Enter Search Query :");
-//                String query = in.nextLine();
-//                node.searchFileQuery(query);
-//            }
-//            if (selection==2) {
-//                System.out.println("Print File Names for a node.");
-//                node.getFilesList();
-//            }
-//            if (selection==3) {
-//                System.out.println("Print Routing table for a node.");
-//                node.getRountingTable();
-//            }
-//            if (selection==4) {
-//                System.out.println("Previous queries.");
-//                node.getPreviousQueries();
-//            }
-//            if (selection==6) {
-//                System.out.println("Rank file. Enter file name: ");
-//                String fileName = in.nextLine();
-//                System.out.println("Rank file. Enter file rank: ");
-//                int rank = in.nextInt();
-//                node.rankFile(fileName,rank);
-//            }
         }
     }
 }

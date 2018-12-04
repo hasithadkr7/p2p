@@ -2,9 +2,12 @@ import java.io.IOException;
 import java.net.*;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.StringTokenizer;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import java.text.DecimalFormat;
+
 
 public class PeerNodeNew{
     ArrayList<Node> routingTable;
@@ -16,6 +19,7 @@ public class PeerNodeNew{
     //HashMap<String, ArrayList<HashMap<Node, Integer>>> fileRanks = new HashMap<String, ArrayList<HashMap<Node, Integer>>>();
     HashMap<String, HashMap<Node, Integer>> fileRanks = new HashMap<String, HashMap<Node, Integer>>();
     private int leaveRequestCount = 0;
+    private static DecimalFormat df2 = new DecimalFormat(".##");
 
 
     public PeerNodeNew(String my_ip, int my_port, String my_username) {
@@ -189,7 +193,24 @@ public class PeerNodeNew{
             System.out.println("Files : "+findings.toString());
         }
     }
-    
+
+    public void getFileRank(String fileName){
+        if (fileRanks.containsKey(fileName)) {
+            int rankTotal = 0;
+            HashMap<Node, Integer> rankMap = fileRanks.get(fileName);
+            int count = rankMap.size();
+            for (Map.Entry<Node, Integer> entry : rankMap.entrySet()) {
+                System.out.println("Item : " + entry.getKey() + " Count : " + entry.getValue());
+                rankTotal = rankTotal+entry.getValue();
+            }
+            double averageRank = (double)rankTotal/count;
+            System.out.println(fileName+" averrage rank = "+df2.format(averageRank));
+        }
+        else{
+            System.out.println("No rank info.");
+        }
+    }
+
     public void rankFile(String fileName, int rank){
         updateRanks(fileName,rank, nodeSelf);
     }
