@@ -7,6 +7,9 @@ import java.util.StringTokenizer;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.text.DecimalFormat;
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+
 
 
 public class PeerNodeNew{
@@ -20,6 +23,8 @@ public class PeerNodeNew{
     HashMap<String, HashMap<Node, Integer>> fileRanks = new HashMap<String, HashMap<Node, Integer>>();
     private int leaveRequestCount = 0;
     private static DecimalFormat df2 = new DecimalFormat(".##");
+    private JSONObject forum = new JSONObject();
+    private int timestamp = 0;
 
 
     public PeerNodeNew(String my_ip, int my_port, String my_username) {
@@ -168,6 +173,15 @@ public class PeerNodeNew{
                                 System.out.println("Ignoring|Duplicate ranking.");
                             }
                         }
+                        else if(command.equals("FORUM_POST") && st.hasMoreTokens()){
+                            //<<length>> FORUM_POST|<<post_id>>|<<post_message>>|<<timestamp>>|<<node_id>>
+                        }
+                        else if(command.equals("FORUM_COMMENT") && st.hasMoreTokens()){
+                            //<<length>> FORUM_COMMENT|<<post_id>>|<<comment_message>>|<<timestamp>>|<<node_id>>
+                        }
+                        else if(command.equals("POST_RANK") && st.hasMoreTokens()){
+                            //<<length>> POST_RANK|<<post_id>>|<<rank>>|<<timestamp>>|<<node_id>>
+                        }
                         getRountingTable();
                         getFilesList();
                         getPreviousQueries();
@@ -182,6 +196,58 @@ public class PeerNodeNew{
                 }
             }
         }).start();
+    }
+
+    public void addForumPost(int postId, String post){
+        //<<length>> FORUM_POST|<<post_id>>|<<post_message>>|<<timestamp>>|<<node_id>>
+        if (!forum.isEmpty()){
+            JSONArray postArray = (JSONArray) forum.get("posts");
+            JSONObject forumPost = getPost(postArray,postId);
+            if (forumPost.isEmpty() || forumPost==null){
+                forumPost.put("post_id",postId);
+                forumPost.put("content",post);
+                forumPost.put("timestamp",timestamp);
+                forumPost.put("node",getNodeHashKey(nodeSelf));
+                postArray.add(forumPost);
+                forum.replace("posts",postArray);
+            }else{
+                forumPost = new JSONObject();
+                forumPost.put("post_id",postId);
+                forumPost.put("content",post);
+                forumPost.put("timestamp",timestamp);
+                forumPost.put("node",getNodeHashKey(nodeSelf));
+                postArray.add(forumPost);
+                forum.replace("posts",postArray);
+            }
+        }else {
+            JSONObject forumPost = new JSONObject();
+            forumPost.put("post_id",postId);
+            forumPost.put("content",post);
+            forumPost.put("timestamp",timestamp);
+            forumPost.put("node",getNodeHashKey(nodeSelf));
+            JSONArray postArray = new JSONArray();
+            postArray.add(forumPost);
+            forum.put("posts",postArray);
+        }
+    }
+
+    private JSONObject getPost(JSONArray postArray,int postId){
+        for (int i=0;i<postArray.size();i++){
+            JSONObject forumPost = (JSONObject) postArray.get(i);
+            int existingPostId = (int) forumPost.get("post_id");
+            if (existingPostId==postId){
+                return forumPost;
+            }
+        }
+        return null;
+    }
+
+    public void rankForumPost(int postId, int rank){
+        //<<length>> POST_RANK|<<post_id>>|<<rank>>|<<timestamp>>|<<node_id>>
+    }
+
+    public void addForumComment(int postId, String comment){
+        //<<length>> FORUM_COMMENT|<<post_id>>|<<comment_message>>|<<timestamp>>|<<node_id>>
     }
 
     public void searchFileQuery(String searchQuery){
@@ -260,6 +326,10 @@ public class PeerNodeNew{
                 e.printStackTrace();
             }
         }
+    }
+
+    private int getNodeHashKey(Node node){
+        return node.toString().hashCode();
     }
 
     private int getHashKey(Node node, String searchQuery){

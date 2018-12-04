@@ -14,6 +14,8 @@ public class StartNode {
             System.out.println("4. Previous queries.");
             System.out.println("5. Rank a file.");
             System.out.println("6. Get file rank.");
+            System.out.println("7. Add forum post.");
+            System.out.println("8. Comment on forum post.");
 
             int selection = Integer.parseInt(in.nextLine().trim());
             switch (selection){
