@@ -23,7 +23,7 @@ public class PeerNodeNew{
     HashMap<String, HashMap<Node, Integer>> fileRanks = new HashMap<String, HashMap<Node, Integer>>();
     private int leaveRequestCount = 0;
     private static DecimalFormat df2 = new DecimalFormat(".##");
-    private JSONObject forum = new JSONObject();
+    private JSONArray forum = new JSONArray(); // is a JSON Array
     private int timestamp = 0;
 
 
@@ -198,37 +198,57 @@ public class PeerNodeNew{
         }).start();
     }
 
-    public void addForumPost(int postId, String post){
+    public void addForumPost(String post){
         //<<length>> FORUM_POST|<<post_id>>|<<post_message>>|<<timestamp>>|<<node_id>>
-        if (!forum.isEmpty()){
-            JSONArray postArray = (JSONArray) forum.get("posts");
-            JSONObject forumPost = getPost(postArray,postId);
-            if (forumPost.isEmpty() || forumPost==null){
-                forumPost.put("post_id",postId);
-                forumPost.put("content",post);
-                forumPost.put("timestamp",timestamp);
-                forumPost.put("node",getNodeHashKey(nodeSelf));
-                postArray.add(forumPost);
-                forum.replace("posts",postArray);
-            }else{
-                forumPost = new JSONObject();
-                forumPost.put("post_id",postId);
-                forumPost.put("content",post);
-                forumPost.put("timestamp",timestamp);
-                forumPost.put("node",getNodeHashKey(nodeSelf));
-                postArray.add(forumPost);
-                forum.replace("posts",postArray);
-            }
-        }else {
-            JSONObject forumPost = new JSONObject();
-            forumPost.put("post_id",postId);
-            forumPost.put("content",post);
-            forumPost.put("timestamp",timestamp);
-            forumPost.put("node",getNodeHashKey(nodeSelf));
-            JSONArray postArray = new JSONArray();
-            postArray.add(forumPost);
-            forum.put("posts",postArray);
-        }
+        // post content should be validated.
+        JSONObject postJson = new JSONObject();
+        postJson.put("_id", forum.size());
+        postJson.put("node_id", nodeSelf.userName);
+        postJson.put("timestamp", System.currentTimeMillis());
+        postJson.put("content", post);
+        postJson.put("rankings", new JSONArray());
+        postJson.put("comments", new JSONArray());
+
+        // an empty Json is created. Now let's add this to the forum
+        forum.add(postJson);
+
+        // we should update the rankings and comments accordingly.
+
+        // now let's transmit this updated forum within other nodes.
+
+//        if (forum.isEmpty()) {
+//            // we are adding a new post.
+//        }
+//        if (!forum.isEmpty()){
+//            int postId = forum.size();
+//            JSONObject forumPost = getPost(postArray,postId);
+//            if (forumPost.isEmpty() || forumPost==null){
+//                forumPost.put("post_id",postId);
+//                forumPost.put("content",post);
+//                forumPost.put("timestamp",timestamp);
+//                forumPost.put("node",getNodeHashKey(nodeSelf));
+//                postArray.add(forumPost);
+//                forum.replace("posts",postArray);
+//            }else{
+//                forumPost = new JSONObject();
+//                forumPost.put("post_id",postId);
+//                forumPost.put("content",post);
+//                forumPost.put("timestamp",timestamp);
+//                forumPost.put("node",getNodeHashKey(nodeSelf));
+//                postArray.add(forumPost);
+//                forum.replace("posts",postArray);
+//            }
+//        }else {
+//
+//            JSONObject forumPost = new JSONObject();
+//            forumPost.put("post_id",1);
+//            forumPost.put("content",post);
+//            forumPost.put("timestamp",timestamp);
+//            forumPost.put("node",getNodeHashKey(nodeSelf));
+//            JSONArray postArray = new JSONArray();
+//            postArray.add(forumPost);
+//            forum.put("posts",postArray);
+//        }
     }
 
     private JSONObject getPost(JSONArray postArray,int postId){
@@ -244,10 +264,34 @@ public class PeerNodeNew{
 
     public void rankForumPost(int postId, int rank){
         //<<length>> POST_RANK|<<post_id>>|<<rank>>|<<timestamp>>|<<node_id>>
+        JSONObject post = (JSONObject)forum.get(postId);
+        JSONArray rankingsJson = (JSONArray) post.get("rankings");
+        rankingsJson.add(JsonUtils.getRankJson(rank, nodeSelf.userName));
+
+        post.replace("rankings", rankingsJson);
+
+        forum.remove(postId);
+        forum.add(postId, post); // added the newer post with updated comment. Same for ranking.
     }
 
-    public void addForumComment(int postId, String comment){
+    public synchronized void addForumComment(int postId, String comment){
         //<<length>> FORUM_COMMENT|<<post_id>>|<<comment_message>>|<<timestamp>>|<<node_id>>
+        String[] commentMsg = comment.split(" ");
+
+        JSONObject post = (JSONObject) forum.get(postId);
+        JSONArray commentsJson = (JSONArray) post.get("comments");
+        JSONObject commentJson = new JSONObject();
+
+        commentJson.put("node_id", commentMsg[5]);
+        commentJson.put("timestamp", commentMsg[4]);
+        commentJson.put("comment_id", commentsJson.size());
+        commentJson.put("comment", commentMsg[3]);
+        commentsJson.add(commentJson);
+        post.replace("comments", commentsJson);
+
+        forum.remove(postId);
+        forum.add(postId, post); // added the newer post with updated comment. Same for ranking.
+
     }
 
     public void searchFileQuery(String searchQuery){
@@ -484,6 +528,7 @@ public class PeerNodeNew{
         }
         return findings;
     }
+
 
     public void getFilesList() {
         System.out.println("----------------------------------------------------------------------------");
