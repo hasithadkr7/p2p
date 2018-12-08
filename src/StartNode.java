@@ -1,3 +1,4 @@
+import java.net.SocketException;
 import java.util.Scanner;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -72,6 +73,11 @@ public class StartNode {
                     // forum post should be added within the node.
                     node.rankForumPost(postId, rank);
                     break;
+                case 10:
+                    System.out.println("Current Forum :");
+                    node.getForum().forEach(jsonObject -> {
+                        System.out.println(jsonObject.toJSONString());
+                    });
 
                 default:
                     System.out.println("No matching input.");
