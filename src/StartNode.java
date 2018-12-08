@@ -51,6 +51,28 @@ public class StartNode {
                     System.out.println("queryName:"+queryName);
                     node.getFileRank(queryName);
                     break;
+                case 7:
+                    System.out.println("Enter Post description: ");
+                    String post = in.nextLine();
+                    System.out.println("Forum Post: " + post);
+                    // forum post should be added within the node.
+                    node.addForumPost(post);
+                    break;
+                case 8:
+                    System.out.println("Comment on Post description: ");
+                    int postId = Integer.parseInt(in.nextLine().trim());
+                    String comment = in.nextLine();
+                    // forum post should be added within the node.
+                    node.addForumComment(postId, comment);
+                    break;
+                case 9:
+                    System.out.println("Rank a Post: ");
+                    postId = Integer.parseInt(in.nextLine().trim());
+                    rank = Integer.parseInt(in.nextLine().trim());
+                    // forum post should be added within the node.
+                    node.rankForumPost(postId, rank);
+                    break;
+
                 default:
                     System.out.println("No matching input.");
             }
