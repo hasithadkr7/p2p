@@ -233,7 +233,7 @@ public class PeerNodeNew{
                             rank.setNodeId(nodeId);
                             rank.setRankValue(rankValue);
 
-                            forum.getPostBytId(postId).getRanks().add(rank);
+                            forum.getPostBytId(postId).addRank(rank);
                         }
                         else {
                             System.out.println("jdhasjkfahgjkah afkjaskjklj adjaskljafklj afklvas");
