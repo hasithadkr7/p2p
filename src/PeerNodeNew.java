@@ -31,11 +31,12 @@ public class PeerNodeNew{
     private static DecimalFormat df2 = new DecimalFormat(".##");
     private Forum forum = new Forum(); // is a JSON Array
     private int timestamp = 0;
+    private DatagramSocket sendSocket;
 
 
     public PeerNodeNew(String my_ip, int my_port, String my_username) {
         nodeSelf = new Node(my_ip, my_port);
-
+        createSendSocket();
         nodeSelf.setUserName(my_username);
         try {
             listenerSocket = new DatagramSocket(my_port);
@@ -216,8 +217,7 @@ public class PeerNodeNew{
                             commentObj.setNodeId(nodeId);
                             commentObj.setCommentId(forum.getPostBytId(postId).getComments().size());
                             forum.getPostBytId(postId).getComments().add(commentObj);
-                            //find the the post.
-//                            forum.
+
 
                         }
                         else if(command.equals("POST_RANK") && st.hasMoreTokens()){
@@ -269,12 +269,7 @@ public class PeerNodeNew{
 
         // an empty Json is created. Now let's add this to the forum
         forum.addPost(postObj); // order has to be preserved.
-        DatagramSocket sendSocket = null;
-        try {
-            sendSocket = new DatagramSocket();
-        } catch (SocketException e) {
-            e.printStackTrace();
-        }
+
 //        forumMessage has to be sent with the header which has the timestamp.
         StringJoiner joiner = new StringJoiner("|");
         String messageType = "FORUM_POST";
@@ -295,6 +290,16 @@ public class PeerNodeNew{
         post.getRanks().add(JsonUtils.getRank(rank, nodeSelf.userName));
 
         forum.updatePost(post);
+        StringJoiner joiner = new StringJoiner("|");
+        String messageType = "POST_RANK";
+        joiner.add(messageType);
+        joiner.add(String.valueOf(postId));
+        joiner.add(String.valueOf(rank));
+        joiner.add(String.valueOf(timestamp));
+        joiner.add(post.getNodeId());
+        String length = String.format("%04d ", joiner.toString().length() + 5);
+        String message = length + joiner.toString();
+        broadCast(sendSocket, message, routingTable);
     }
 
     public synchronized void addForumComment(int postId, String comment){
@@ -313,6 +318,16 @@ public class PeerNodeNew{
         forum.updatePost(post); // added the newer post with updated comment. Same for ranking.
 
         // broadcast the post to
+        StringJoiner joiner = new StringJoiner("|");
+        String messageType = "FORUM_COMMENT";
+        joiner.add(messageType);
+        joiner.add(String.valueOf(postId));
+        joiner.add(comment);
+        joiner.add(String.valueOf(timestamp));
+        joiner.add(post.getNodeId());
+        String length = String.format("%04d ", joiner.toString().length() + 5);
+        String message = length + joiner.toString();
+        broadCast(sendSocket, message, routingTable);
 
     }
 
@@ -595,6 +610,15 @@ public class PeerNodeNew{
 
     public void setForum(Forum forum) {
         this.forum = forum;
+    }
+
+    public DatagramSocket createSendSocket() {
+        try {
+            sendSocket = new DatagramSocket();
+        } catch (SocketException e) {
+            e.printStackTrace();
+        }
+        return sendSocket;
     }
 }
 
