@@ -16,6 +16,7 @@ import javafx.geometry.Pos;
 import model.Comment;
 import model.Forum;
 import model.Post;
+import model.Rank;
 
 public class PeerNodeNew{
     ArrayList<Node> routingTable;
@@ -190,9 +191,6 @@ public class PeerNodeNew{
                             System.out.println(receivedMessage);
                             ObjectMapper mapper = new ObjectMapper();
                             Post post = mapper.readValue(postMsg, Post.class);
-                            System.out.println(postMsg);
-                            System.out.println(post.toString());
-
                             // now add this post to the forum.
                             post.setTimestamp(timestamp);
                             if (forum.postExist(post)) {
@@ -212,13 +210,30 @@ public class PeerNodeNew{
                             String comment = commentMsg.nextToken();
                             timestamp = Integer.max(timestamp, Integer.parseInt(commentMsg.nextToken().trim()));
                             String nodeId = commentMsg.nextToken().trim();
-
+                            Comment commentObj = new Comment();
+                            commentObj.setContent(comment);
+                            commentObj.setTimestamp(timestamp);
+                            commentObj.setNodeId(nodeId);
+                            commentObj.setCommentId(forum.getPostBytId(postId).getComments().size());
+                            forum.getPostBytId(postId).getComments().add(commentObj);
                             //find the the post.
 //                            forum.
 
                         }
                         else if(command.equals("POST_RANK") && st.hasMoreTokens()){
                             //<<length>> POST_RANK|<<post_id>>|<<rank>>|<<timestamp>>|<<node_id>>
+                            StringTokenizer tokenizer = new StringTokenizer(receivedMessage, "|");
+                            tokenizer.nextToken();
+                            int postId = Integer.parseInt(tokenizer.nextToken());
+                            int rankValue = Integer.parseInt(tokenizer.nextToken());
+                            timestamp = Integer.max(timestamp, Integer.parseInt(tokenizer.nextToken().trim()));
+                            String nodeId = tokenizer.nextToken().trim();
+
+                            Rank rank = new Rank();
+                            rank.setNodeId(nodeId);
+                            rank.setRankValue(rankValue);
+
+                            forum.getPostBytId(postId).getRanks().add(rank);
                         }
                         else {
                             System.out.println("jdhasjkfahgjkah afkjaskjklj adjaskljafklj afklvas");
