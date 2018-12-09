@@ -10,6 +10,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.text.DecimalFormat;
 
+import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import javafx.geometry.Pos;
 import model.Comment;
@@ -185,6 +186,8 @@ public class PeerNodeNew{
                             tokens.nextToken();
                             timestamp = Integer.max(Integer.parseInt(tokens.nextToken().trim()), timestamp);
                             String postMsg = tokens.nextToken();
+                            System.out.println(postMsg);
+                            System.out.println(receivedMessage);
                             ObjectMapper mapper = new ObjectMapper();
                             Post post = mapper.readValue(postMsg, Post.class);
                             System.out.println(postMsg);
@@ -570,5 +573,13 @@ public class PeerNodeNew{
     }
 
     // getters and setters.
+
+    public Forum getForum() {
+        return forum;
+    }
+
+    public void setForum(Forum forum) {
+        this.forum = forum;
+    }
 }
 

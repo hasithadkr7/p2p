@@ -1,10 +1,18 @@
 package model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import java.io.IOException;
 import java.util.Objects;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class Rank {
 
+    @JsonProperty("node_id")
     private String nodeId;
+    @JsonProperty("rank")
     private int rankValue;
 
     public String getNodeId() {
@@ -27,10 +35,19 @@ public class Rank {
 
     @Override
     public String toString() {
-        return "Rank{" +
-                "nodeId='" + nodeId + '\'' +
-                ", rankValue=" + rankValue +
-                '}';
+        ObjectMapper mapper = new ObjectMapper();
+
+        try {
+            return mapper.writeValueAsString(this);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return null;
+//        return "Rank{" +
+//                "nodeId='" + nodeId + '\'' +
+//                ", rankValue=" + rankValue +
+//                '}';
     }
 
     @Override

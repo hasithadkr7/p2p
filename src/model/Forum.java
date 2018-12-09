@@ -1,13 +1,23 @@
 package model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import javafx.geometry.Pos;
 
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class Forum {
 
+    @JsonProperty("posts")
     private List<Post> postList;
 
+    public Forum() {
+        this.postList = new ArrayList<>();
+    }
 
     public List<Post> getPostList() {
         return postList;
@@ -37,5 +47,17 @@ public class Forum {
         postList.add(post);
     }
 
-
+    @Override
+    public String toString() {
+        ObjectMapper mapper = new ObjectMapper();
+        try {
+            return mapper.writeValueAsString(this);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+//        return "Forum{" +
+//                "postList=" + postList +
+//                '}';
+        return null;
+    }
 }

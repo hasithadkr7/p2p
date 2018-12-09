@@ -17,6 +17,8 @@ public class StartNode {
             System.out.println("6. Get file rank.");
             System.out.println("7. Add forum post.");
             System.out.println("8. Comment on forum post.");
+            System.out.println("9. Rank a Forum Post");
+            System.out.println("10. View the Forum.");
 
             int selection = Integer.parseInt(in.nextLine().trim());
             switch (selection){
@@ -75,9 +77,7 @@ public class StartNode {
                     break;
                 case 10:
                     System.out.println("Current Forum :");
-                    node.getForum().forEach(jsonObject -> {
-                        System.out.println(jsonObject.toJSONString());
-                    });
+                    System.out.println(node.getForum().getPostList().toString());
 
                 default:
                     System.out.println("No matching input.");
