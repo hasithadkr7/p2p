@@ -55,9 +55,7 @@ public class Forum {
         } catch (IOException e) {
             e.printStackTrace();
         }
-//        return "Forum{" +
-//                "postList=" + postList +
-//                '}';
+
         return null;
     }
 }
