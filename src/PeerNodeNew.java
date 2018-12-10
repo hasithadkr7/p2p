@@ -2,15 +2,21 @@ import java.io.IOException;
 import java.net.*;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.StringJoiner;
 import java.util.StringTokenizer;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.text.DecimalFormat;
-import org.json.simple.JSONArray;
-import org.json.simple.JSONObject;
 
-
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import javafx.geometry.Pos;
+import model.Comment;
+import model.Forum;
+import model.Post;
+import model.Rank;
 
 public class PeerNodeNew{
     ArrayList<Node> routingTable;
@@ -23,13 +29,15 @@ public class PeerNodeNew{
     HashMap<String, HashMap<Node, Integer>> fileRanks = new HashMap<String, HashMap<Node, Integer>>();
     private int leaveRequestCount = 0;
     private static DecimalFormat df2 = new DecimalFormat(".##");
-    private JSONArray forum = new JSONArray(); // is a JSON Array
+    private Forum forum = new Forum(); // is a JSON Array
     private int timestamp = 0;
+    private DatagramSocket sendSocket;
 
 
     public PeerNodeNew(String my_ip, int my_port, String my_username) {
         nodeSelf = new Node(my_ip, my_port);
-        //nodeSelf.setUserName(my_username);
+        createSendSocket();
+        nodeSelf.setUserName(my_username);
         try {
             listenerSocket = new DatagramSocket(my_port);
             routingTable = new ArrayList<Node>();
@@ -60,7 +68,7 @@ public class PeerNodeNew{
                         StringTokenizer st = new StringTokenizer(receivedMessage, " ");
                         String length = st.nextToken();
                         String command = st.nextToken().trim();
-                        System.out.println("command : "+command);
+                        System.out.println("command : "+ command);
                         if (command.equals("REGOK")) {
                             //0051 REGOK 2 129.82.123.45 5001 64.12.123.190 34001
                             int peerCount = Integer.parseInt(st.nextToken());
@@ -173,14 +181,62 @@ public class PeerNodeNew{
                                 System.out.println("Ignoring|Duplicate ranking.");
                             }
                         }
-                        else if(command.equals("FORUM_POST") && st.hasMoreTokens()){
-                            //<<length>> FORUM_POST|<<post_id>>|<<post_message>>|<<timestamp>>|<<node_id>>
+                        else if(command.contains("FORUM_POST")){
+                            //<<length>> FORUM_POST <<timestamp>> <<post_message>>
+                            //now need to check for the timestamp in the
+                            StringTokenizer tokens = new StringTokenizer(receivedMessage, "|");
+                            tokens.nextToken();
+                            timestamp = Integer.max(Integer.parseInt(tokens.nextToken().trim()), timestamp);
+                            String postMsg = tokens.nextToken();
+                            System.out.println(postMsg);
+                            System.out.println(receivedMessage);
+                            ObjectMapper mapper = new ObjectMapper();
+                            Post post = mapper.readValue(postMsg, Post.class);
+                            // now add this post to the forum.
+                            post.setTimestamp(timestamp);
+                            if (forum.postExist(post)) {
+                                forum.updatePost(post);
+                            } else {
+                                forum.addPost(post);
+                            }
+                            System.out.println(forum);
+
+
                         }
                         else if(command.equals("FORUM_COMMENT") && st.hasMoreTokens()){
                             //<<length>> FORUM_COMMENT|<<post_id>>|<<comment_message>>|<<timestamp>>|<<node_id>>
+                            StringTokenizer commentMsg = new StringTokenizer(receivedMessage, "|");
+                            commentMsg.nextToken();
+                            int postId = Integer.parseInt(commentMsg.nextToken());
+                            String comment = commentMsg.nextToken();
+                            timestamp = Integer.max(timestamp, Integer.parseInt(commentMsg.nextToken().trim()));
+                            String nodeId = commentMsg.nextToken().trim();
+                            Comment commentObj = new Comment();
+                            commentObj.setContent(comment);
+                            commentObj.setTimestamp(timestamp);
+                            commentObj.setNodeId(nodeId);
+                            commentObj.setCommentId(forum.getPostBytId(postId).getComments().size());
+                            forum.getPostBytId(postId).getComments().add(commentObj);
+
+
                         }
                         else if(command.equals("POST_RANK") && st.hasMoreTokens()){
                             //<<length>> POST_RANK|<<post_id>>|<<rank>>|<<timestamp>>|<<node_id>>
+                            StringTokenizer tokenizer = new StringTokenizer(receivedMessage, "|");
+                            tokenizer.nextToken();
+                            int postId = Integer.parseInt(tokenizer.nextToken());
+                            int rankValue = Integer.parseInt(tokenizer.nextToken());
+                            timestamp = Integer.max(timestamp, Integer.parseInt(tokenizer.nextToken().trim()));
+                            String nodeId = tokenizer.nextToken().trim();
+
+                            Rank rank = new Rank();
+                            rank.setNodeId(nodeId);
+                            rank.setRankValue(rankValue);
+
+                            forum.getPostBytId(postId).addRank(rank);
+                        }
+                        else {
+                            System.out.println("jdhasjkfahgjkah afkjaskjklj adjaskljafklj afklvas");
                         }
                         getRountingTable();
                         getFilesList();
@@ -201,96 +257,77 @@ public class PeerNodeNew{
     public void addForumPost(String post){
         //<<length>> FORUM_POST|<<post_id>>|<<post_message>>|<<timestamp>>|<<node_id>>
         // post content should be validated.
-        JSONObject postJson = new JSONObject();
-        postJson.put("_id", forum.size());
-        postJson.put("node_id", nodeSelf.userName);
-        postJson.put("timestamp", System.currentTimeMillis());
-        postJson.put("content", post);
-        postJson.put("rankings", new JSONArray());
-        postJson.put("comments", new JSONArray());
+        timestamp++;
+        Post postObj = new Post();
+
+        postObj.setPostId(forum.getPostList().size());
+        postObj.setNodeId(nodeSelf.getUserName());
+        postObj.setTimestamp(timestamp);
+        postObj.setContent(post);
+        postObj.setRanks(new ArrayList<>());
+        postObj.setComments(new ArrayList<>());
 
         // an empty Json is created. Now let's add this to the forum
-        forum.add(postJson);
+        forum.addPost(postObj); // order has to be preserved.
 
+//        forumMessage has to be sent with the header which has the timestamp.
+        StringJoiner joiner = new StringJoiner("|");
+        String messageType = "FORUM_POST";
+        joiner.add(messageType);
+        joiner.add(String.valueOf(timestamp));
+        joiner.add(postObj.toString());
+        String length = String.format("%04d ", joiner.toString().length() + 5);
+        String message = length + joiner.toString();
+        broadCast(sendSocket, message, this.routingTable);
         // we should update the rankings and comments accordingly.
 
-        // now let's transmit this updated forum within other nodes.
 
-//        if (forum.isEmpty()) {
-//            // we are adding a new post.
-//        }
-//        if (!forum.isEmpty()){
-//            int postId = forum.size();
-//            JSONObject forumPost = getPost(postArray,postId);
-//            if (forumPost.isEmpty() || forumPost==null){
-//                forumPost.put("post_id",postId);
-//                forumPost.put("content",post);
-//                forumPost.put("timestamp",timestamp);
-//                forumPost.put("node",getNodeHashKey(nodeSelf));
-//                postArray.add(forumPost);
-//                forum.replace("posts",postArray);
-//            }else{
-//                forumPost = new JSONObject();
-//                forumPost.put("post_id",postId);
-//                forumPost.put("content",post);
-//                forumPost.put("timestamp",timestamp);
-//                forumPost.put("node",getNodeHashKey(nodeSelf));
-//                postArray.add(forumPost);
-//                forum.replace("posts",postArray);
-//            }
-//        }else {
-//
-//            JSONObject forumPost = new JSONObject();
-//            forumPost.put("post_id",1);
-//            forumPost.put("content",post);
-//            forumPost.put("timestamp",timestamp);
-//            forumPost.put("node",getNodeHashKey(nodeSelf));
-//            JSONArray postArray = new JSONArray();
-//            postArray.add(forumPost);
-//            forum.put("posts",postArray);
-//        }
-    }
-
-    private JSONObject getPost(JSONArray postArray,int postId){
-        for (int i=0;i<postArray.size();i++){
-            JSONObject forumPost = (JSONObject) postArray.get(i);
-            int existingPostId = (int) forumPost.get("post_id");
-            if (existingPostId==postId){
-                return forumPost;
-            }
-        }
-        return null;
     }
 
     public void rankForumPost(int postId, int rank){
         //<<length>> POST_RANK|<<post_id>>|<<rank>>|<<timestamp>>|<<node_id>>
-        JSONObject post = (JSONObject)forum.get(postId);
-        JSONArray rankingsJson = (JSONArray) post.get("rankings");
-        rankingsJson.add(JsonUtils.getRankJson(rank, nodeSelf.userName));
+        Post post = forum.getPostBytId(postId);
+        post.getRanks().add(JsonUtils.getRank(rank, nodeSelf.userName));
 
-        post.replace("rankings", rankingsJson);
-
-        forum.remove(postId);
-        forum.add(postId, post); // added the newer post with updated comment. Same for ranking.
+        forum.updatePost(post);
+        StringJoiner joiner = new StringJoiner("|");
+        String messageType = "POST_RANK";
+        joiner.add(messageType);
+        joiner.add(String.valueOf(postId));
+        joiner.add(String.valueOf(rank));
+        joiner.add(String.valueOf(timestamp));
+        joiner.add(post.getNodeId());
+        String length = String.format("%04d ", joiner.toString().length() + 5);
+        String message = length + joiner.toString();
+        broadCast(sendSocket, message, routingTable);
     }
 
     public synchronized void addForumComment(int postId, String comment){
         //<<length>> FORUM_COMMENT|<<post_id>>|<<comment_message>>|<<timestamp>>|<<node_id>>
-        String[] commentMsg = comment.split(" ");
 
-        JSONObject post = (JSONObject) forum.get(postId);
-        JSONArray commentsJson = (JSONArray) post.get("comments");
-        JSONObject commentJson = new JSONObject();
+        Post post = forum.getPostBytId(postId);
 
-        commentJson.put("node_id", commentMsg[5]);
-        commentJson.put("timestamp", commentMsg[4]);
-        commentJson.put("comment_id", commentsJson.size());
-        commentJson.put("comment", commentMsg[3]);
-        commentsJson.add(commentJson);
-        post.replace("comments", commentsJson);
+        Comment commentJson = new Comment();
+        timestamp ++;
+        commentJson.setNodeId(nodeSelf.getUserName());
+        commentJson.setTimestamp(timestamp);
+        commentJson.setCommentId(post.getComments().size());
+        commentJson.setContent(comment);
+        post.getComments().add(commentJson);
 
-        forum.remove(postId);
-        forum.add(postId, post); // added the newer post with updated comment. Same for ranking.
+        forum.updatePost(post); // added the newer post with updated comment. Same for ranking.
+
+        // broadcast the post to
+        StringJoiner joiner = new StringJoiner("|");
+        String messageType = "FORUM_COMMENT";
+        joiner.add(messageType);
+        joiner.add(String.valueOf(postId));
+        joiner.add(comment);
+        joiner.add(String.valueOf(timestamp));
+        joiner.add(post.getNodeId());
+        String length = String.format("%04d ", joiner.toString().length() + 5);
+        String message = length + joiner.toString();
+        broadCast(sendSocket, message, routingTable);
 
     }
 
@@ -565,5 +602,23 @@ public class PeerNodeNew{
         System.out.println("----------------------------------------------------------------------------");
     }
 
+    // getters and setters.
+
+    public Forum getForum() {
+        return forum;
+    }
+
+    public void setForum(Forum forum) {
+        this.forum = forum;
+    }
+
+    public DatagramSocket createSendSocket() {
+        try {
+            sendSocket = new DatagramSocket();
+        } catch (SocketException e) {
+            e.printStackTrace();
+        }
+        return sendSocket;
+    }
 }
 
