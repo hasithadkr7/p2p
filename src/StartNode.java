@@ -1,11 +1,10 @@
-import java.net.SocketException;
 import java.util.Scanner;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class StartNode {
     public static void main(String[] args) {
         int port = ThreadLocalRandom.current().nextInt(1050, 50000);
-        PeerNodeNew node = new PeerNodeNew("127.0.0.1",port,"node" + port);
+        PeerNodeNew1 node = new PeerNodeNew1("127.0.0.1",port,"node" + port);
         Scanner in = new Scanner(System.in);
         while(true) {
             System.out.println("What you want to do?");
@@ -85,3 +84,4 @@ public class StartNode {
         }
     }
 }
+
