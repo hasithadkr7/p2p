@@ -1,3 +1,5 @@
+package com.dc.peer;
+
 import java.util.Arrays;
 
 public class InitConfig {

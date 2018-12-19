@@ -1,4 +1,6 @@
-import model.Rank;
+package com.dc.peer;
+
+import com.dc.peer.model.Rank;
 
 public final class JsonUtils {
 

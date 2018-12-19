@@ -1,3 +1,5 @@
+package com.dc.peer;
+
 class Neighbour{
 	private String ip;
 	private int port;
