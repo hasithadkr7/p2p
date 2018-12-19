@@ -1,7 +1,11 @@
-
 apply plugin : 'idea'
 apply plugin : 'java'
 
+archivesBaseName = 'PeerNode'
+version = '1.0-SNAPSHOT'
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
 repositories {
     mavenCentral()
 }
@@ -9,4 +13,16 @@ dependencies {
 // https://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-databind
     compile group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.9.0'
 
+}
+
+mainClassName = 'com.dc.peer.StartNode'
+
+task fatJar (type: Jar){
+    manifest {
+        attributes 'Implementation-Title': 'PeerNode executable',
+                'Implementation-Version': version,
+                'Main-Class': 'com.dc.peer.StartNode'
+    }
+    from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
+    with jar
 }

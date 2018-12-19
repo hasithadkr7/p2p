@@ -1,31 +1,30 @@
+package com.dc.peer;
+
+import com.dc.peer.model.Comment;
+import com.dc.peer.model.Forum;
+import com.dc.peer.model.Post;
+import com.dc.peer.model.Rank;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+
 import java.io.IOException;
 import java.net.*;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.StringJoiner;
-import java.util.StringTokenizer;
+import java.text.DecimalFormat;
+import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-import java.text.DecimalFormat;
 
-import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import javafx.geometry.Pos;
-import model.Comment;
-import model.Forum;
-import model.Post;
-import model.Rank;
-
-public class PeerNodeNew{
+public class PeerNode {
     ArrayList<Node> routingTable;
     String[] filesList;
     Node nodeSelf;
     DatagramSocket listenerSocket = null;
     HashMap<Integer, String> previousQueries = new HashMap<Integer, String>();
     HashMap<Integer, String> previousRankings = new HashMap<Integer, String>();
-    //HashMap<String, ArrayList<HashMap<Node, Integer>>> fileRanks = new HashMap<String, ArrayList<HashMap<Node, Integer>>>();
+    HashMap<Integer, String> previousPosts = new HashMap<Integer, String>();
+    HashMap<Integer, String> previousComments = new HashMap<Integer, String>();
+    HashMap<Integer, String> previousPostRankings = new HashMap<Integer, String>();
     HashMap<String, HashMap<Node, Integer>> fileRanks = new HashMap<String, HashMap<Node, Integer>>();
     private int leaveRequestCount = 0;
     private static DecimalFormat df2 = new DecimalFormat(".##");
@@ -34,7 +33,7 @@ public class PeerNodeNew{
     private DatagramSocket sendSocket;
 
 
-    public PeerNodeNew(String my_ip, int my_port, String my_username) {
+    public PeerNode(String my_ip, int my_port, String my_username) {
         nodeSelf = new Node(my_ip, my_port);
         createSendSocket();
         nodeSelf.setUserName(my_username);
@@ -63,7 +62,7 @@ public class PeerNodeNew{
                         listenerSocket.receive(receivePacket);
                         byte[] data = receivePacket.getData();
                         String receivedMessage = new String(data, 0, receivePacket.getLength());
-                        System.out.println("listen|port: "+nodeSelf.port+"|receivedMessage : "+receivedMessage);
+                        System.out.println("listen|port: "+nodeSelf.getPort()+"|receivedMessage : "+receivedMessage);
 
                         StringTokenizer st = new StringTokenizer(receivedMessage, " ");
                         String length = st.nextToken();
@@ -167,61 +166,87 @@ public class PeerNodeNew{
                             }
                         }
                         else if(command.equals("FILE_RANK") && st.hasMoreTokens()){
+                            //<<length>>|FILE_RANK|<<file_id>>|<<rank>>|<<timestamp>>|<<creator node>>|<<sender node>>
                             StringTokenizer tokens = new StringTokenizer(receivedMessage, "|");
                             tokens.nextToken();
                             String fileName = tokens.nextToken().trim();
                             int rank = Integer.parseInt(tokens.nextToken().trim());
                             String ip = tokens.nextToken().trim();
                             int port = Integer.parseInt(tokens.nextToken().trim());
-                            int rankKey = getRankHashKey(new Node(ip,port),fileName,rank);
+                            Node creator = new Node(ip,port);
+                            String ip1 = tokens.nextToken().trim();
+                            int port1 = Integer.parseInt(tokens.nextToken().trim());
+                            Node sender = new Node(ip1,port1);
+                            int rankKey = getRankHashKey(creator,fileName,rank);
                             if (!previousRankings.containsKey(rankKey)){
-                                updateRanks(fileName,rank, new Node(ip,port));
+                                updateRanks(fileName,rank, creator, sender);
                                 previousRankings.put(rankKey,fileName);
                             }else {
                                 System.out.println("Ignoring|Duplicate ranking.");
                             }
                         }
                         else if(command.contains("FORUM_POST")){
-                            //<<length>> FORUM_POST <<timestamp>> <<post_message>>
+                            //0132 FORUM_POST |1|{"post_id":0,"timestamp":1,"node_id":"node35685","content":"hello world","ranks":[],"comments":[],"avg_rank":0.0}|creator|sender
                             //now need to check for the timestamp in the
                             StringTokenizer tokens = new StringTokenizer(receivedMessage, "|");
                             tokens.nextToken();
                             timestamp = Integer.max(Integer.parseInt(tokens.nextToken().trim()), timestamp);
                             String postMsg = tokens.nextToken();
+                            String ip = tokens.nextToken().trim();
+                            int port = Integer.parseInt(tokens.nextToken().trim());
+                            Node creator = new Node(ip,port);
                             System.out.println(postMsg);
                             System.out.println(receivedMessage);
                             ObjectMapper mapper = new ObjectMapper();
                             Post post = mapper.readValue(postMsg, Post.class);
-                            // now add this post to the forum.
-                            post.setTimestamp(timestamp);
-                            if (forum.postExist(post)) {
-                                forum.updatePost(post);
-                            } else {
-                                forum.addPost(post);
+                            //post+creator
+                            int hashKey = getPostHashKey(post,creator);
+                            if (!previousPosts.containsKey(hashKey)){
+                                updateForumPost(post,creator);
+                            }else {
+                                System.out.println("Ignoring|Duplicate forum post.");
                             }
                             System.out.println(forum);
-
-
                         }
                         else if(command.equals("FORUM_COMMENT") && st.hasMoreTokens()){
                             //<<length>> FORUM_COMMENT|<<post_id>>|<<comment_message>>|<<timestamp>>|<<node_id>>
+                            //0038 FORUM_COMMENT |0|nice|2|node35685|sender node
+                            //0053 FORUM_COMMENT |0|like|3|node49061|127.0.0.1|6889
                             StringTokenizer commentMsg = new StringTokenizer(receivedMessage, "|");
                             commentMsg.nextToken();
                             int postId = Integer.parseInt(commentMsg.nextToken());
                             String comment = commentMsg.nextToken();
                             timestamp = Integer.max(timestamp, Integer.parseInt(commentMsg.nextToken().trim()));
                             String nodeId = commentMsg.nextToken().trim();
-                            Comment commentObj = new Comment();
-                            commentObj.setContent(comment);
-                            commentObj.setTimestamp(timestamp);
-                            commentObj.setNodeId(nodeId);
-                            commentObj.setCommentId(forum.getPostBytId(postId).getComments().size());
-                            forum.getPostBytId(postId).getComments().add(commentObj);
-
-
+                            int hashKey = getCommentHashKey(postId,comment,nodeId);
+                            if (!previousComments.containsKey(hashKey)){
+                                Comment commentObj = new Comment();
+                                commentObj.setContent(comment);
+                                commentObj.setTimestamp(timestamp);
+                                commentObj.setNodeId(nodeId);
+                                commentObj.setCommentId(forum.getPostBytId(postId).getComments().size());
+                                forum.getPostBytId(postId).getComments().add(commentObj);
+                                StringJoiner joiner = new StringJoiner("|");
+                                String messageType = "FORUM_COMMENT ";
+                                joiner.add(messageType);
+                                joiner.add(String.valueOf(postId));
+                                joiner.add(comment);
+                                joiner.add(String.valueOf(timestamp));
+                                joiner.add(commentObj.getNodeId());
+                                joiner.add(nodeSelf.getIp());
+                                joiner.add(String.valueOf(nodeSelf.getPort()));
+                                length = String.format("%04d ", joiner.toString().length() + 5);
+                                String message = length + joiner.toString();
+                                broadcastMessage(message);
+                                previousComments.put(hashKey,comment);
+                            }else {
+                                System.out.println("Ignoring|Duplicate forum post comment.");
+                            }
+                            //post id+Comment+creator id
                         }
                         else if(command.equals("POST_RANK") && st.hasMoreTokens()){
                             //<<length>> POST_RANK|<<post_id>>|<<rank>>|<<timestamp>>|<<node_id>>
+                            //0031 POST_RANK |0|4|2|node35685|sender node
                             StringTokenizer tokenizer = new StringTokenizer(receivedMessage, "|");
                             tokenizer.nextToken();
                             int postId = Integer.parseInt(tokenizer.nextToken());
@@ -229,15 +254,33 @@ public class PeerNodeNew{
                             timestamp = Integer.max(timestamp, Integer.parseInt(tokenizer.nextToken().trim()));
                             String nodeId = tokenizer.nextToken().trim();
 
-                            Rank rank = new Rank();
-                            rank.setNodeId(nodeId);
-                            rank.setRankValue(rankValue);
+                            int hashKey = getPostRankHashKey(postId,rankValue,nodeId);
+                            if (!previousPostRankings.containsKey(hashKey)){
+                                Rank rank = new Rank();
+                                rank.setNodeId(nodeId);
+                                rank.setRankValue(rankValue);
 
-                            forum.getPostBytId(postId).addRank(rank);
+                                forum.getPostBytId(postId).addRank(rank);
+
+                                StringJoiner joiner = new StringJoiner("|");
+                                String messageType = "POST_RANK ";
+                                joiner.add(messageType);
+                                joiner.add(String.valueOf(postId));
+                                joiner.add(String.valueOf(rankValue));
+                                joiner.add(String.valueOf(timestamp));
+                                joiner.add(nodeId);
+                                joiner.add(nodeSelf.getIp());
+                                joiner.add(String.valueOf(nodeSelf.getPort()));
+                                length = String.format("%04d ", joiner.toString().length() + 5);
+                                String message = length + joiner.toString();
+                                previousPostRankings.put(hashKey,rank.toString());
+                                broadcastMessage(message);
+                            }else {
+                                System.out.println("Ignoring|Duplicate forum post comment.");
+                            }
+                            //post id+rank+node id
                         }
-                        else {
-                            System.out.println("jdhasjkfahgjkah afkjaskjklj adjaskljafklj afklvas");
-                        }
+                        else System.out.println("Invalid message format|receivedMessage: " + receivedMessage);
                         getRountingTable();
                         getFilesList();
                         getPreviousQueries();
@@ -254,62 +297,95 @@ public class PeerNodeNew{
         }).start();
     }
 
-    public void addForumPost(String post){
-        //<<length>> FORUM_POST|<<post_id>>|<<post_message>>|<<timestamp>>|<<node_id>>
-        // post content should be validated.
-        timestamp++;
-        Post postObj = new Post();
+    private void broadcastMessage(String message){
+        for (int i = 0; i < this.routingTable.size(); i++) {
+            Node neighbour = this.routingTable.get(i);
+            try {
+                InetAddress ip = InetAddress.getByName(neighbour.getIp());
+                DatagramPacket sendPacket = new DatagramPacket(message.getBytes(), message.length(),ip,neighbour.getPort());
+                listenerSocket.send(sendPacket);
+            } catch (UnknownHostException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
 
+    public void addForumPost(String post){
+        Post postObj = new Post();
         postObj.setPostId(forum.getPostList().size());
-        postObj.setNodeId(nodeSelf.getUserName());
+        postObj.setNodeId(this.nodeSelf.getUserName());
         postObj.setTimestamp(timestamp);
         postObj.setContent(post);
         postObj.setRanks(new ArrayList<>());
         postObj.setComments(new ArrayList<>());
+        updateForumPost(postObj, this.nodeSelf);
+    }
 
+    public void updateForumPost(Post post,Node creator){
+        //<<length>> FORUM_POST|<<post_id>>|<<post_message>>|<<timestamp>>|<<node_id>>
+        // post content should be validated.
+        timestamp++;
         // an empty Json is created. Now let's add this to the forum
-        forum.addPost(postObj); // order has to be preserved.
-
-//        forumMessage has to be sent with the header which has the timestamp.
+        //forum.addPost(postObj); // order has to be preserved.
+        if (forum.postExist(post)) {
+            forum.updatePost(post);
+        } else {
+            forum.addPost(post);
+        }
+        //forumMessage has to be sent with the header which has the timestamp.
         StringJoiner joiner = new StringJoiner("|");
-        String messageType = "FORUM_POST";
+        String messageType = "FORUM_POST "; //keep space after message type(command) otherwise tokenizing won't work as expected.
         joiner.add(messageType);
         joiner.add(String.valueOf(timestamp));
-        joiner.add(postObj.toString());
+        joiner.add(post.toString());
+        joiner.add(creator.getIp());
+        joiner.add(String.valueOf(creator.getPort()));
+        joiner.add(this.nodeSelf.getIp());
+        joiner.add(String.valueOf(this.nodeSelf.getPort()));
         String length = String.format("%04d ", joiner.toString().length() + 5);
         String message = length + joiner.toString();
-        broadCast(sendSocket, message, this.routingTable);
+        broadcastMessage(message);
+        int hashKey = getPostHashKey(post,creator);
+        previousPosts.put(hashKey,post.toString());
         // we should update the rankings and comments accordingly.
-
-
     }
 
     public void rankForumPost(int postId, int rank){
         //<<length>> POST_RANK|<<post_id>>|<<rank>>|<<timestamp>>|<<node_id>>
         Post post = forum.getPostBytId(postId);
-        post.getRanks().add(JsonUtils.getRank(rank, nodeSelf.userName));
+        post.getRanks().add(JsonUtils.getRank(rank, this.nodeSelf.getUserName()));
 
         forum.updatePost(post);
         StringJoiner joiner = new StringJoiner("|");
-        String messageType = "POST_RANK";
+        String messageType = "POST_RANK ";
         joiner.add(messageType);
         joiner.add(String.valueOf(postId));
         joiner.add(String.valueOf(rank));
         joiner.add(String.valueOf(timestamp));
-        joiner.add(post.getNodeId());
+        joiner.add(this.nodeSelf.getUserName());
+        joiner.add(this.nodeSelf.getIp());
+        joiner.add(String.valueOf(this.nodeSelf.getPort()));
         String length = String.format("%04d ", joiner.toString().length() + 5);
         String message = length + joiner.toString();
-        broadCast(sendSocket, message, routingTable);
+        int hashKey = getPostRankHashKey(postId,rank,this.nodeSelf.getUserName());
+        Rank rankObj = new Rank();
+        rankObj.setNodeId(this.nodeSelf.getUserName());
+        rankObj.setRankValue(rank);
+        previousPostRankings.put(hashKey,rankObj.toString());
+        System.out.println("rankForumPost|message: "+message);
+        broadcastMessage(message);
     }
 
-    public synchronized void addForumComment(int postId, String comment){
+    public void addForumComment(int postId, String comment){
         //<<length>> FORUM_COMMENT|<<post_id>>|<<comment_message>>|<<timestamp>>|<<node_id>>
-
+        //0038 FORUM_COMMENT |0|nice|2|node35685
         Post post = forum.getPostBytId(postId);
 
         Comment commentJson = new Comment();
         timestamp ++;
-        commentJson.setNodeId(nodeSelf.getUserName());
+        commentJson.setNodeId(this.nodeSelf.getUserName());
         commentJson.setTimestamp(timestamp);
         commentJson.setCommentId(post.getComments().size());
         commentJson.setContent(comment);
@@ -319,16 +395,19 @@ public class PeerNodeNew{
 
         // broadcast the post to
         StringJoiner joiner = new StringJoiner("|");
-        String messageType = "FORUM_COMMENT";
+        String messageType = "FORUM_COMMENT ";
         joiner.add(messageType);
         joiner.add(String.valueOf(postId));
         joiner.add(comment);
         joiner.add(String.valueOf(timestamp));
-        joiner.add(post.getNodeId());
+        joiner.add(this.nodeSelf.getUserName());
+        joiner.add(this.nodeSelf.getIp());
+        joiner.add(String.valueOf(this.nodeSelf.getPort()));
         String length = String.format("%04d ", joiner.toString().length() + 5);
         String message = length + joiner.toString();
-        broadCast(sendSocket, message, routingTable);
-
+        int hashKey = getCommentHashKey(postId,comment,this.nodeSelf.getUserName());
+        previousComments.put(hashKey,comment);
+        broadcastMessage(message);
     }
 
     public void searchFileQuery(String searchQuery){
@@ -359,58 +438,39 @@ public class PeerNodeNew{
     }
 
     public void rankFile(String fileName, int rank){
-        updateRanks(fileName,rank, nodeSelf);
+        updateRanks(fileName,rank, this.nodeSelf, this.nodeSelf);
     }
 
-    private void updateRanks(String fileName, int rank, Node node){
+    private void updateRanks(String fileName, int rank, Node creator, Node sender){
         //<<length>>|FILE_RANK|<<file_id>>|<<rank>>|<<timestamp>>|<<node_id>>
         //HashMap<String,HashMap<String, Integer>>
-        System.out.println("updateRanks: "+fileName+" rank:"+rank+" node:"+node.toString());
+        System.out.println("updateRanks: "+fileName+" rank:"+rank+" node:"+creator.toString());
         HashMap<Node, Integer> rankMap;
         this.getFileRanks();
         if (fileRanks.containsKey(fileName)){
             System.out.println("Existing.");
             rankMap = fileRanks.get(fileName);
-            if (rankMap.containsKey(node)){
+            if (rankMap.containsKey(creator)){
                 System.out.println("----Existing.");
-                rankMap.replace(node,rank);
+                rankMap.replace(creator,rank);
             }else {
                 System.out.println("----New file.");
-                rankMap.put(node,rank);
+                rankMap.put(creator,rank);
             }
             fileRanks.replace(fileName,rankMap);
         }else {
             System.out.println("New file.");
             rankMap = new HashMap<Node, Integer>();
-            rankMap.put(node,rank);
+            rankMap.put(creator,rank);
             fileRanks.put(fileName,rankMap);
         }
-        String rankFileMessageTmp = " FILE_RANK |"+fileName+"|"+rank+"|"+node.ip+"|"+node.port;
+        String rankFileMessageTmp = " FILE_RANK |"+fileName+"|"+rank+"|"+creator.getIp()+"|"+creator.getPort()+"|"+ this.nodeSelf.getIp()+"|"+ this.nodeSelf.getPort();
         //0034 FILE_RANK |hello world.mp4|2|132.43.12.43|45231
         String rankFileMessage = String.format("%04d", rankFileMessageTmp.length() + 4)+rankFileMessageTmp;
         System.out.println("rankFileMessage: "+rankFileMessage);
-        int rankKey = getRankHashKey(node,fileName,rank);
+        int rankKey = getRankHashKey(creator,fileName,rank);
         previousRankings.put(rankKey,fileName);
-        forwardRankMessage(rankFileMessage);
-    }
-
-    private void forwardRankMessage(String rankFileMessage){
-        for (int i = 0; i < this.routingTable.size(); i++) {
-            Node neighbour = this.routingTable.get(i);
-            try {
-                InetAddress ip = InetAddress.getByName(neighbour.ip);
-                DatagramPacket sendPacket = new DatagramPacket(rankFileMessage.getBytes(), rankFileMessage.length(),ip,neighbour.port);
-                listenerSocket.send(sendPacket);
-            } catch (UnknownHostException e) {
-                e.printStackTrace();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
-    private int getNodeHashKey(Node node){
-        return node.toString().hashCode();
+        broadcastMessage(rankFileMessage);
     }
 
     private int getHashKey(Node node, String searchQuery){
@@ -423,13 +483,31 @@ public class PeerNodeNew{
         return fullStr.hashCode();
     }
 
+    ////post+creator
+    private int getPostHashKey(Post post, Node creator){
+        String fullStr = post.toString()+"|"+creator.toString();
+        return fullStr.hashCode();
+    }
+
+    //post id+Comment+creator id
+    private int getCommentHashKey(int postId, String comment,String nodeId){
+        String fullStr = postId+"|"+comment+"|"+nodeId;
+        return fullStr.hashCode();
+    }
+
+    //post id+rank+node id
+    private int getPostRankHashKey(int postId, int rank,String nodeId){
+        String fullStr = postId+"|"+rank+"|"+nodeId;
+        return fullStr.hashCode();
+    }
+
     private void sendJoinRequest(Node node){
-        String joinRequestMessageTmp = " JOIN " + nodeSelf.ip + " " + nodeSelf.port;
+        String joinRequestMessageTmp = " JOIN " + this.nodeSelf.getIp() + " " + this.nodeSelf.getPort();
         String joinRequestMessage = String.format("%04d", joinRequestMessageTmp.length() + 4)+joinRequestMessageTmp;
         System.out.println("joinRequestMessage: "+joinRequestMessage);
         try {
-            InetAddress ip = InetAddress.getByName(node.ip);
-            DatagramPacket sendPacket = new DatagramPacket(joinRequestMessage.getBytes(), joinRequestMessage.length(),ip,node.port);
+            InetAddress ip = InetAddress.getByName(node.getIp());
+            DatagramPacket sendPacket = new DatagramPacket(joinRequestMessage.getBytes(), joinRequestMessage.length(),ip,node.getPort());
             listenerSocket.send(sendPacket);
         } catch (UnknownHostException e) {
             e.printStackTrace();
@@ -440,25 +518,14 @@ public class PeerNodeNew{
 
     private void forwardSearchQuery(Node node,String searchQuery,int hopCount){
         //0047 SER 129.82.62.142 5070 "Lord of the rings" 2
-        String newQueryMessageTmp = " SER "+node.ip+" "+node.port+" \""+searchQuery+"\" "+String.format("%02d", hopCount+1);
+        String newQueryMessageTmp = " SER "+node.getIp()+" "+node.getPort()+" \""+searchQuery+"\" "+String.format("%02d", hopCount+1);
         String newQueryMessage = String.format("%04d", newQueryMessageTmp.length() + 4)+ newQueryMessageTmp;
-        for (int i = 0; i < this.routingTable.size(); i++) {
-            Node neighbour = this.routingTable.get(i);
-            try {
-                InetAddress ip = InetAddress.getByName(neighbour.ip);
-                DatagramPacket sendPacket = new DatagramPacket(newQueryMessage.getBytes(), newQueryMessage.length(),ip,neighbour.port);
-                listenerSocket.send(sendPacket);
-            } catch (UnknownHostException e) {
-                e.printStackTrace();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
+        broadcastMessage(newQueryMessage);
     }
 
     private void leaveRequest(){
         //0028 LEAVE 64.12.123.190 432
-        String leaveRequestMessageTmp = " LEAVE " + nodeSelf.ip + " " + nodeSelf.port;
+        String leaveRequestMessageTmp = " LEAVE " + this.nodeSelf.getIp() + " " + this.nodeSelf.getPort();
         String leaveRequestMessage = String.format("%04d", leaveRequestMessageTmp.length() + 4)+ leaveRequestMessageTmp;
         System.out.println("leaveRequestMessage: "+leaveRequestMessage);
         try {
@@ -477,13 +544,13 @@ public class PeerNodeNew{
         //0114 SEROK 3 129.82.128.1 2301 baby_go_home.mp3 baby_come_back.mp3 baby.mpeg
         String findingsStr = String.join(" ", findings);
         //length SEROK no_files IP port hops filename1 filename2
-        String searchOkMessageTmp = " SEROK "+findings.size()+" "+this.nodeSelf.ip+" "+this.nodeSelf.port
+        String searchOkMessageTmp = " SEROK "+findings.size()+" "+this.nodeSelf.getIp()+" "+this.nodeSelf.getPort()
                 +" "+hopCount+" "+findingsStr;
         String searchOkMessage = String.format("%04d", searchOkMessageTmp.length() + 4)+ searchOkMessageTmp;
         System.out.println("searchOkMessage: "+searchOkMessage);
         try {
-            InetAddress ip = InetAddress.getByName(node.ip);
-            DatagramPacket sendPacket = new DatagramPacket(searchOkMessage.getBytes(), searchOkMessage.length(),ip,node.port);
+            InetAddress ip = InetAddress.getByName(node.getIp());
+            DatagramPacket sendPacket = new DatagramPacket(searchOkMessage.getBytes(), searchOkMessage.length(),ip,node.getPort());
             listenerSocket.send(sendPacket);
         } catch (UnknownHostException e) {
             e.printStackTrace();
@@ -503,8 +570,8 @@ public class PeerNodeNew{
         String joinOkMessage = String.format("%04d", joinOkMessageTmp.length() + 4)+ joinOkMessageTmp;
         System.out.println("joinOkMessageTmp: "+joinOkMessageTmp);
         try {
-            InetAddress ip = InetAddress.getByName(node.ip);
-            DatagramPacket sendPacket = new DatagramPacket(joinOkMessageTmp.getBytes(), joinOkMessageTmp.length(),ip,node.port);
+            InetAddress ip = InetAddress.getByName(node.getIp());
+            DatagramPacket sendPacket = new DatagramPacket(joinOkMessageTmp.getBytes(), joinOkMessageTmp.length(),ip,node.getPort());
             listenerSocket.send(sendPacket);
         } catch (UnknownHostException e) {
             e.printStackTrace();
@@ -514,7 +581,7 @@ public class PeerNodeNew{
     }
 
     private void sendRegisterRequest(){
-        String register_message_tmp = " REG " + nodeSelf.ip + " " + nodeSelf.port + " " + nodeSelf.getUserName();
+        String register_message_tmp = " REG " + this.nodeSelf.getIp() + " " + this.nodeSelf.getPort() + " " + this.nodeSelf.getUserName();
         String register_message = String.format("%04d", register_message_tmp.length() + 4)+ register_message_tmp;
         System.out.println("register_message: "+register_message);
         try {
@@ -525,23 +592,6 @@ public class PeerNodeNew{
             e.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
-        }
-    }
-
-
-    private void broadCast(DatagramSocket listenerSocket, String message, ArrayList<Node> routingTable){
-        for (int i = 0; i < routingTable.size(); i++) {
-            Node neighbour = routingTable.get(i);
-            InetAddress ip = null;
-            try {
-                ip = InetAddress.getByName(neighbour.ip);
-                DatagramPacket sendPacket = new DatagramPacket(message.getBytes(), message.length(),ip,neighbour.port);
-                listenerSocket.send(sendPacket);
-            } catch (UnknownHostException e) {
-                e.printStackTrace();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
         }
     }
 
