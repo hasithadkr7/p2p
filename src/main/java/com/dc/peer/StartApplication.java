@@ -28,6 +28,7 @@ public class StartApplication {
             System.out.println("8. Comment on forum post.");
             System.out.println("9. Rank a Forum Post");
             System.out.println("10. View the Forum.");
+	    System.out.println("11. Leave the network.");
 
             int selection = Integer.parseInt(in.nextLine().trim());
             switch (selection){
@@ -87,7 +88,9 @@ public class StartApplication {
                 case 10:
                     System.out.println("Current Forum :");
                     System.out.println(node.getForum().getPostList().toString());
-
+		case 11:
+                    System.out.println("Leave the network.");
+                    node.leaveRequest();
                 default:
                     System.out.println("No matching input.");
             }
