@@ -574,7 +574,7 @@ public class Peer {
         System.out.println("joinOkMessageTmp: "+joinOkMessageTmp);
         try {
             InetAddress ip = InetAddress.getByName(node.getIp());
-            DatagramPacket sendPacket = new DatagramPacket(joinOkMessageTmp.getBytes(), joinOkMessageTmp.length(),ip,node.getPort());
+            DatagramPacket sendPacket = new DatagramPacket(joinOkMessage.getBytes(), joinOkMessage.length(),ip,node.getPort());
             listenerSocket.send(sendPacket);
         } catch (UnknownHostException e) {
             e.printStackTrace();
