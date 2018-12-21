@@ -590,6 +590,7 @@ public class Peer {
         try {
             InetAddress bootIp = InetAddress.getByName(InitConfig.bootstrap_ip);
             DatagramPacket sendPacket = new DatagramPacket(register_message.getBytes(), register_message.length(),bootIp,InitConfig.bootstrap_port);
+            System.out.println("Bootstrap IP " + bootIp);
             listenerSocket.send(sendPacket);
         } catch (UnknownHostException e) {
             e.printStackTrace();
