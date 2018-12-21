@@ -1,12 +1,20 @@
 package com.dc.peer;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.Scanner;
 import java.util.concurrent.ThreadLocalRandom;
 
-public class StartNode {
+public class StartApplication {
     public static void main(String[] args) {
         int port = ThreadLocalRandom.current().nextInt(1050, 50000);
-        PeerNode node = new PeerNode("127.0.0.1",port,"node" + port);
+        String address = null;
+        try {
+            address = InetAddress.getLocalHost().getHostAddress();
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+        }
+        Peer node = new Peer(address,port,"node" + port);
         Scanner in = new Scanner(System.in);
         while(true) {
             System.out.println("What you want to do?");

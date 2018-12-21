@@ -11,21 +11,20 @@ import java.io.IOException;
 import java.net.*;
 import java.text.DecimalFormat;
 import java.util.*;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-public class PeerNode {
+public class Peer {
     ArrayList<Node> routingTable;
     String[] filesList;
-    Node nodeSelf;
+    Node node;
     DatagramSocket listenerSocket = null;
-    HashMap<Integer, String> previousQueries = new HashMap<Integer, String>();
-    HashMap<Integer, String> previousRankings = new HashMap<Integer, String>();
-    HashMap<Integer, String> previousPosts = new HashMap<Integer, String>();
-    HashMap<Integer, String> previousComments = new HashMap<Integer, String>();
-    HashMap<Integer, String> previousPostRankings = new HashMap<Integer, String>();
-    HashMap<String, HashMap<Node, Integer>> fileRanks = new HashMap<String, HashMap<Node, Integer>>();
+    HashMap<Integer, String> previousQueries = new HashMap();
+    HashMap<Integer, String> previousRankings = new HashMap();
+    HashMap<Integer, String> previousPosts = new HashMap();
+    HashMap<Integer, String> previousComments = new HashMap();
+    HashMap<Integer, String> previousPostRankings = new HashMap();
+    HashMap<String, HashMap<Node, Integer>> fileRanks = new HashMap();
     private int leaveRequestCount = 0;
     private static DecimalFormat df2 = new DecimalFormat(".##");
     private Forum forum = new Forum(); // is a JSON Array
@@ -33,20 +32,16 @@ public class PeerNode {
     private DatagramSocket sendSocket;
 
 
-    public PeerNode(String my_ip, int my_port, String my_username) {
-        nodeSelf = new Node(my_ip, my_port);
+    public Peer(String my_ip, int my_port, String my_username) {
+        node = new Node(my_ip, my_port);
+        node.setUserName(my_username);
         createSendSocket();
-        nodeSelf.setUserName(my_username);
-        try {
-            listenerSocket = new DatagramSocket(my_port);
-            routingTable = new ArrayList<Node>();
-            filesList = InitConfig.getRandomFiles();
-            getFilesList();
-            sendRegisterRequest();
-            listen();
-        } catch (SocketException e) {
-            e.printStackTrace();
-        }
+        createReceiveSocket(my_ip, my_port);
+        filesList = InitConfig.getRandomFiles();
+        routingTable = new ArrayList();
+        getFilesList();
+        sendRegisterRequest();
+        listen();
     }
 
 
@@ -56,13 +51,13 @@ public class PeerNode {
             public void run() {
                 try {
                     while (true) {
-                        System.out.println("Waiting for Incomming...");
+                        System.out.println("Waiting for Incoming...");
                         byte[] buffer = new byte[65536];
                         DatagramPacket receivePacket = new DatagramPacket(buffer, buffer.length);
                         listenerSocket.receive(receivePacket);
                         byte[] data = receivePacket.getData();
                         String receivedMessage = new String(data, 0, receivePacket.getLength());
-                        System.out.println("listen|port: "+nodeSelf.getPort()+"|receivedMessage : "+receivedMessage);
+                        System.out.println("listen|port: "+ node.getPort()+"|receivedMessage : "+receivedMessage);
 
                         StringTokenizer st = new StringTokenizer(receivedMessage, " ");
                         String length = st.nextToken();
@@ -72,25 +67,33 @@ public class PeerNode {
                             //0051 REGOK 2 129.82.123.45 5001 64.12.123.190 34001
                             int peerCount = Integer.parseInt(st.nextToken());
                             System.out.println("peerCount : "+peerCount);
-                            if (peerCount==1){
+                            for (int i = 0; i < peerCount; i++) {
                                 String ip = st.nextToken();
                                 int port = Integer.parseInt(st.nextToken().trim());
-                                Node node = new Node(ip,port);
+                                Node node = new Node(ip, port);
                                 routingTable.add(node);
                                 sendJoinRequest(node);
+
                             }
-                            else if (peerCount==2){
-                                String ip1 = st.nextToken();
-                                int port1 = Integer.parseInt(st.nextToken().trim());
-                                Node node1 = new Node(ip1,port1);
-                                routingTable.add(node1);
-                                sendJoinRequest(node1);
-                                String ip2 = st.nextToken();
-                                int port2 = Integer.parseInt(st.nextToken().trim());
-                                Node node2 = new Node(ip2,port2);
-                                routingTable.add(node2);
-                                sendJoinRequest(node2);
-                            }
+//                            if (peerCount==1){
+//                                String ip = st.nextToken();
+//                                int port = Integer.parseInt(st.nextToken().trim());
+//                                Node node = new Node(ip,port);
+//                                routingTable.add(node);
+//                                sendJoinRequest(node);
+//                            }
+//                            else if (peerCount==2){
+//                                String ip1 = st.nextToken();
+//                                int port1 = Integer.parseInt(st.nextToken().trim());
+//                                Node node1 = new Node(ip1,port1);
+//                                routingTable.add(node1);
+//                                sendJoinRequest(node1);
+//                                String ip2 = st.nextToken();
+//                                int port2 = Integer.parseInt(st.nextToken().trim());
+//                                Node node2 = new Node(ip2,port2);
+//                                routingTable.add(node2);
+//                                sendJoinRequest(node2);
+//                            }
                         }
                         else if(command.equals("JOIN") && st.hasMoreTokens()){
                             //0027 JOIN 64.12.123.190 432
@@ -233,8 +236,8 @@ public class PeerNode {
                                 joiner.add(comment);
                                 joiner.add(String.valueOf(timestamp));
                                 joiner.add(commentObj.getNodeId());
-                                joiner.add(nodeSelf.getIp());
-                                joiner.add(String.valueOf(nodeSelf.getPort()));
+                                joiner.add(node.getIp());
+                                joiner.add(String.valueOf(node.getPort()));
                                 length = String.format("%04d ", joiner.toString().length() + 5);
                                 String message = length + joiner.toString();
                                 broadcastMessage(message);
@@ -269,8 +272,8 @@ public class PeerNode {
                                 joiner.add(String.valueOf(rankValue));
                                 joiner.add(String.valueOf(timestamp));
                                 joiner.add(nodeId);
-                                joiner.add(nodeSelf.getIp());
-                                joiner.add(String.valueOf(nodeSelf.getPort()));
+                                joiner.add(node.getIp());
+                                joiner.add(String.valueOf(node.getPort()));
                                 length = String.format("%04d ", joiner.toString().length() + 5);
                                 String message = length + joiner.toString();
                                 previousPostRankings.put(hashKey,rank.toString());
@@ -315,12 +318,12 @@ public class PeerNode {
     public void addForumPost(String post){
         Post postObj = new Post();
         postObj.setPostId(forum.getPostList().size());
-        postObj.setNodeId(this.nodeSelf.getUserName());
+        postObj.setNodeId(this.node.getUserName());
         postObj.setTimestamp(timestamp);
         postObj.setContent(post);
         postObj.setRanks(new ArrayList<>());
         postObj.setComments(new ArrayList<>());
-        updateForumPost(postObj, this.nodeSelf);
+        updateForumPost(postObj, this.node);
     }
 
     public void updateForumPost(Post post,Node creator){
@@ -342,8 +345,8 @@ public class PeerNode {
         joiner.add(post.toString());
         joiner.add(creator.getIp());
         joiner.add(String.valueOf(creator.getPort()));
-        joiner.add(this.nodeSelf.getIp());
-        joiner.add(String.valueOf(this.nodeSelf.getPort()));
+        joiner.add(this.node.getIp());
+        joiner.add(String.valueOf(this.node.getPort()));
         String length = String.format("%04d ", joiner.toString().length() + 5);
         String message = length + joiner.toString();
         broadcastMessage(message);
@@ -355,7 +358,7 @@ public class PeerNode {
     public void rankForumPost(int postId, int rank){
         //<<length>> POST_RANK|<<post_id>>|<<rank>>|<<timestamp>>|<<node_id>>
         Post post = forum.getPostBytId(postId);
-        post.getRanks().add(JsonUtils.getRank(rank, this.nodeSelf.getUserName()));
+        post.getRanks().add(JsonUtils.getRank(rank, this.node.getUserName()));
 
         forum.updatePost(post);
         StringJoiner joiner = new StringJoiner("|");
@@ -364,14 +367,14 @@ public class PeerNode {
         joiner.add(String.valueOf(postId));
         joiner.add(String.valueOf(rank));
         joiner.add(String.valueOf(timestamp));
-        joiner.add(this.nodeSelf.getUserName());
-        joiner.add(this.nodeSelf.getIp());
-        joiner.add(String.valueOf(this.nodeSelf.getPort()));
+        joiner.add(this.node.getUserName());
+        joiner.add(this.node.getIp());
+        joiner.add(String.valueOf(this.node.getPort()));
         String length = String.format("%04d ", joiner.toString().length() + 5);
         String message = length + joiner.toString();
-        int hashKey = getPostRankHashKey(postId,rank,this.nodeSelf.getUserName());
+        int hashKey = getPostRankHashKey(postId,rank,this.node.getUserName());
         Rank rankObj = new Rank();
-        rankObj.setNodeId(this.nodeSelf.getUserName());
+        rankObj.setNodeId(this.node.getUserName());
         rankObj.setRankValue(rank);
         previousPostRankings.put(hashKey,rankObj.toString());
         System.out.println("rankForumPost|message: "+message);
@@ -385,7 +388,7 @@ public class PeerNode {
 
         Comment commentJson = new Comment();
         timestamp ++;
-        commentJson.setNodeId(this.nodeSelf.getUserName());
+        commentJson.setNodeId(this.node.getUserName());
         commentJson.setTimestamp(timestamp);
         commentJson.setCommentId(post.getComments().size());
         commentJson.setContent(comment);
@@ -400,12 +403,12 @@ public class PeerNode {
         joiner.add(String.valueOf(postId));
         joiner.add(comment);
         joiner.add(String.valueOf(timestamp));
-        joiner.add(this.nodeSelf.getUserName());
-        joiner.add(this.nodeSelf.getIp());
-        joiner.add(String.valueOf(this.nodeSelf.getPort()));
+        joiner.add(this.node.getUserName());
+        joiner.add(this.node.getIp());
+        joiner.add(String.valueOf(this.node.getPort()));
         String length = String.format("%04d ", joiner.toString().length() + 5);
         String message = length + joiner.toString();
-        int hashKey = getCommentHashKey(postId,comment,this.nodeSelf.getUserName());
+        int hashKey = getCommentHashKey(postId,comment,this.node.getUserName());
         previousComments.put(hashKey,comment);
         broadcastMessage(message);
     }
@@ -414,7 +417,7 @@ public class PeerNode {
         ArrayList<String> findings = findFileInList(searchQuery,this.filesList);
         if (findings.isEmpty()){
             //Forward search query.
-            forwardSearchQuery(this.nodeSelf,searchQuery,0);
+            forwardSearchQuery(this.node,searchQuery,0);
         }else {
             System.out.println("Files : "+findings.toString());
         }
@@ -438,7 +441,7 @@ public class PeerNode {
     }
 
     public void rankFile(String fileName, int rank){
-        updateRanks(fileName,rank, this.nodeSelf, this.nodeSelf);
+        updateRanks(fileName,rank, this.node, this.node);
     }
 
     private void updateRanks(String fileName, int rank, Node creator, Node sender){
@@ -464,7 +467,7 @@ public class PeerNode {
             rankMap.put(creator,rank);
             fileRanks.put(fileName,rankMap);
         }
-        String rankFileMessageTmp = " FILE_RANK |"+fileName+"|"+rank+"|"+creator.getIp()+"|"+creator.getPort()+"|"+ this.nodeSelf.getIp()+"|"+ this.nodeSelf.getPort();
+        String rankFileMessageTmp = " FILE_RANK |"+fileName+"|"+rank+"|"+creator.getIp()+"|"+creator.getPort()+"|"+ this.node.getIp()+"|"+ this.node.getPort();
         //0034 FILE_RANK |hello world.mp4|2|132.43.12.43|45231
         String rankFileMessage = String.format("%04d", rankFileMessageTmp.length() + 4)+rankFileMessageTmp;
         System.out.println("rankFileMessage: "+rankFileMessage);
@@ -502,7 +505,7 @@ public class PeerNode {
     }
 
     private void sendJoinRequest(Node node){
-        String joinRequestMessageTmp = " JOIN " + this.nodeSelf.getIp() + " " + this.nodeSelf.getPort();
+        String joinRequestMessageTmp = " JOIN " + this.node.getIp() + " " + this.node.getPort();
         String joinRequestMessage = String.format("%04d", joinRequestMessageTmp.length() + 4)+joinRequestMessageTmp;
         System.out.println("joinRequestMessage: "+joinRequestMessage);
         try {
@@ -525,7 +528,7 @@ public class PeerNode {
 
     private void leaveRequest(){
         //0028 LEAVE 64.12.123.190 432
-        String leaveRequestMessageTmp = " LEAVE " + this.nodeSelf.getIp() + " " + this.nodeSelf.getPort();
+        String leaveRequestMessageTmp = " LEAVE " + this.node.getIp() + " " + this.node.getPort();
         String leaveRequestMessage = String.format("%04d", leaveRequestMessageTmp.length() + 4)+ leaveRequestMessageTmp;
         System.out.println("leaveRequestMessage: "+leaveRequestMessage);
         try {
@@ -544,7 +547,7 @@ public class PeerNode {
         //0114 SEROK 3 129.82.128.1 2301 baby_go_home.mp3 baby_come_back.mp3 baby.mpeg
         String findingsStr = String.join(" ", findings);
         //length SEROK no_files IP port hops filename1 filename2
-        String searchOkMessageTmp = " SEROK "+findings.size()+" "+this.nodeSelf.getIp()+" "+this.nodeSelf.getPort()
+        String searchOkMessageTmp = " SEROK "+findings.size()+" "+this.node.getIp()+" "+this.node.getPort()
                 +" "+hopCount+" "+findingsStr;
         String searchOkMessage = String.format("%04d", searchOkMessageTmp.length() + 4)+ searchOkMessageTmp;
         System.out.println("searchOkMessage: "+searchOkMessage);
@@ -581,7 +584,7 @@ public class PeerNode {
     }
 
     private void sendRegisterRequest(){
-        String register_message_tmp = " REG " + this.nodeSelf.getIp() + " " + this.nodeSelf.getPort() + " " + this.nodeSelf.getUserName();
+        String register_message_tmp = " REG " + this.node.getIp() + " " + this.node.getPort() + " " + this.node.getUserName();
         String register_message = String.format("%04d", register_message_tmp.length() + 4)+ register_message_tmp;
         System.out.println("register_message: "+register_message);
         try {
@@ -662,10 +665,22 @@ public class PeerNode {
         this.forum = forum;
     }
 
-    public DatagramSocket createSendSocket() {
+    private DatagramSocket createSendSocket() {
         try {
             sendSocket = new DatagramSocket();
         } catch (SocketException e) {
+            e.printStackTrace();
+        }
+        return sendSocket;
+    }
+
+    private DatagramSocket createReceiveSocket(String ip, int port) {
+        try {
+            InetAddress inetAddress = InetAddress.getByName(ip);
+            listenerSocket = new DatagramSocket(port, inetAddress);
+        } catch (SocketException e) {
+            e.printStackTrace();
+        } catch (UnknownHostException e) {
             e.printStackTrace();
         }
         return sendSocket;
