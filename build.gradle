@@ -1,5 +1,6 @@
 apply plugin : 'idea'
 apply plugin : 'java'
+apply plugin : 'application'
 
 archivesBaseName = 'PeerNode'
 version = '1.0-SNAPSHOT'
@@ -15,13 +16,13 @@ dependencies {
 
 }
 
-mainClassName = 'com.dc.peer.StartNode'
+mainClassName = 'com.dc.peer.StartApplication'
 
 task fatJar (type: Jar){
     manifest {
         attributes 'Implementation-Title': 'PeerNode executable',
                 'Implementation-Version': version,
-                'Main-Class': 'com.dc.peer.StartNode'
+                'Main-Class': 'com.dc.peer.StartApplication'
     }
     from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
     with jar
