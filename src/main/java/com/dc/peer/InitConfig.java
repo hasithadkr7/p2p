@@ -6,7 +6,7 @@ public class InitConfig {
     static String my_ip = "127.0.0.1";
     static int my_port = 4132;
     static String my_username = "node1";
-    static String bootstrap_ip = "10.10.8.42";
+    static String bootstrap_ip = "10.8.97.93";
     static int bootstrap_port = 55555;
     static enum MessageType { MSG_REG, MSG_REGOK, MSG_UNROK, MSG_UNREG, MSG_JOINOK ,MSG_JOIN, MSG_LEAVE,MSG_LEAVEOK ,MSG_SER, MSG_SEROK, MSG_ERROR};
 
