@@ -12,9 +12,9 @@ public class BootstrapServer {
 
     public static void main(String args[])
     {
-        DatagramSocket sock = null;
+        DatagramSocket sock;
         String s;
-        List<Neighbour> nodes = new ArrayList<Neighbour>();
+        List<Neighbour> nodes = new ArrayList();
 
         try
         {
