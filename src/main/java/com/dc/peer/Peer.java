@@ -33,6 +33,7 @@ public class Peer {
 
 
     public Peer(String my_ip, int my_port, String my_username) {
+        System.out.println("Creating Node with Name :" + my_username);
         node = new Node(my_ip, my_port);
         node.setUserName(my_username);
         createSendSocket();
@@ -65,6 +66,7 @@ public class Peer {
                         System.out.println("command : "+ command);
                         if (command.equals("REGOK")) {
                             //0051 REGOK 2 129.82.123.45 5001 64.12.123.190 34001
+
                             int peerCount = Integer.parseInt(st.nextToken());
                             System.out.println("peerCount : "+peerCount);
                             for (int i = 0; i < peerCount; i++) {
