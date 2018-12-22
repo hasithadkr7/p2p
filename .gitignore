@@ -1,0 +1,13 @@
+# Created by .ignore support plugin (hsz.mobi)
+
+#.gitignore
+
+.idea
+out
+p2p.iml
+p2p.ipr
+p2p.iws
+#.gradle/
+
+#build/classes
+#build/tmp
