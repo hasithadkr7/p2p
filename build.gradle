@@ -14,6 +14,10 @@ dependencies {
 // https://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-databind
     compile group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.9.0'
 
+    // https://mvnrepository.com/artifact/org.testng/testng
+    testCompile group: 'org.testng', name: 'testng', version: '6.11'
+
+
 }
 
 mainClassName = 'com.dc.peer.StartApplication'
