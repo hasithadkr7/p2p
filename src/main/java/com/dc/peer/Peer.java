@@ -46,7 +46,7 @@ public class Peer {
     }
 
 
-    public void listen() {
+    public synchronized void listen() {
         (new Thread() {
             @Override
             public void run() {
@@ -137,11 +137,15 @@ public class Peer {
                             String ip = st.nextToken();
                             int port = Integer.parseInt(st.nextToken().trim());
                             Node node = new Node(ip,port);
+                            String query = st.nextToken().trim();
+
                             StringTokenizer st1 = new StringTokenizer(receivedMessage, "\"");
                             st1.nextToken().trim();
-                            String searchQuery = st1.nextToken().trim();
+                            String searchQuery = query.substring(1, query.length() - 1);
+//                            st1.nextToken().trim();
                             int hopCount = Integer.parseInt(st1.nextToken().trim());
                             int searchKey = getHashKey(node,searchQuery);
+                            System.out.println("Search Query :" + searchQuery);
                             if (!previousQueries.containsKey(searchKey)){
                                 ArrayList<String> findings = findFileInList(searchQuery,filesList);
                                 if (findings.isEmpty()){
@@ -604,7 +608,7 @@ public class Peer {
     private ArrayList<String> findFileInList(String queryName,String[] fileList){
         ArrayList<String> findings = new ArrayList<String>();
         for(String fileName: fileList){
-            if (fileName.contains(queryName)){
+            if (fileName.toLowerCase().contains(queryName.toLowerCase())){
                 int similarityCount = 0;
                 String[] queryWords = queryName.split(" ");
                 for(String queryWord: queryWords){
