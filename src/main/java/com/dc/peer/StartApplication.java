@@ -38,7 +38,7 @@ public class StartApplication {
                 case 1:
                     System.out.println("Enter Search Query :");
                     String query = in.nextLine();
-                    node.searchFileQuery(query);
+                    node.searchFileQuery(query.toLowerCase());
                     break;
                 case 2:
                     System.out.println("Print File Names for a node.");
