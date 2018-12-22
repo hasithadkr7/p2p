@@ -571,7 +571,7 @@ public class Peer {
             joinOkMessageTmp = " JOINOK 9999";
         }
         String joinOkMessage = String.format("%04d", joinOkMessageTmp.length() + 4)+ joinOkMessageTmp;
-        System.out.println("joinOkMessageTmp: "+joinOkMessageTmp);
+        System.out.println("joinOkMessageTmp: "+joinOkMessage);
         try {
             InetAddress ip = InetAddress.getByName(node.getIp());
             DatagramPacket sendPacket = new DatagramPacket(joinOkMessage.getBytes(), joinOkMessage.length(),ip,node.getPort());

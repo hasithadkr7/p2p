@@ -7,14 +7,16 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class StartApplication {
     public static void main(String[] args) {
-        int port = ThreadLocalRandom.current().nextInt(1050, 50000);
+        // get the boot node to the session
+        InitConfig.setBootstrap_ip(args[0]);
+        int port = 22222;
         String address = null;
         try {
             address = InetAddress.getLocalHost().getHostAddress();
         } catch (UnknownHostException e) {
             e.printStackTrace();
         }
-        Peer node = new Peer(address,port,"node" + port);
+        Peer node = new Peer(address, port,"Node :" + address);
         Scanner in = new Scanner(System.in);
         while(true) {
             System.out.println("What you want to do?");
@@ -90,7 +92,7 @@ public class StartApplication {
                     System.out.println(node.getForum().getPostList().toString());
 		case 11:
                     System.out.println("Leave the network.");
-                    node.leaveRequest();
+//                    node.leaveRequest();
                 default:
                     System.out.println("No matching input.");
             }
