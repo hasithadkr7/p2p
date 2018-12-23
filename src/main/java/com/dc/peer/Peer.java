@@ -75,25 +75,6 @@ public class Peer {
                                 sendJoinRequest(node);
 
                             }
-//                            if (peerCount==1){
-//                                String ip = st.nextToken();
-//                                int port = Integer.parseInt(st.nextToken().trim());
-//                                Node node = new Node(ip,port);
-//                                routingTable.add(node);
-//                                sendJoinRequest(node);
-//                            }
-//                            else if (peerCount==2){
-//                                String ip1 = st.nextToken();
-//                                int port1 = Integer.parseInt(st.nextToken().trim());
-//                                Node node1 = new Node(ip1,port1);
-//                                routingTable.add(node1);
-//                                sendJoinRequest(node1);
-//                                String ip2 = st.nextToken();
-//                                int port2 = Integer.parseInt(st.nextToken().trim());
-//                                Node node2 = new Node(ip2,port2);
-//                                routingTable.add(node2);
-//                                sendJoinRequest(node2);
-//                            }
                         }
                         else if(command.equals("JOIN") && st.hasMoreTokens()){
                             //0027 JOIN 64.12.123.190 432

@@ -7,6 +7,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class StartApplication {
     public static void main(String[] args) {
+        String bootIp = args[0];
         int port = ThreadLocalRandom.current().nextInt(1050, 50000);
         String address = null;
         try {
@@ -14,7 +15,7 @@ public class StartApplication {
         } catch (UnknownHostException e) {
             e.printStackTrace();
         }
-        Peer node = new Peer(address,port,"node" + port);
+        PeerNodeNew1 node = new PeerNodeNew1(bootIp, address,port,"node" + port);
         Scanner in = new Scanner(System.in);
         while(true) {
             System.out.println("What you want to do?");
