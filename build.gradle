@@ -1,5 +1,6 @@
 apply plugin : 'idea'
 apply plugin : 'java'
+apply plugin : 'application'
 
 archivesBaseName = 'PeerNode'
 version = '1.0-SNAPSHOT'
@@ -10,18 +11,24 @@ repositories {
     mavenCentral()
 }
 dependencies {
-// https://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-databind
+    // https://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-databind
     compile group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.9.0'
+    // https://mvnrepository.com/artifact/org.apache.commons/commons-lang3
+    compile group: 'org.apache.commons', name: 'commons-lang3', version: '3.4'
+
+    // https://mvnrepository.com/artifact/org.testng/testng
+    testCompile group: 'org.testng', name: 'testng', version: '6.11'
+
 
 }
 
-mainClassName = 'com.dc.peer.StartNode'
+mainClassName = 'com.dc.peer.StartApplication'
 
 task fatJar (type: Jar){
     manifest {
         attributes 'Implementation-Title': 'PeerNode executable',
                 'Implementation-Version': version,
-                'Main-Class': 'com.dc.peer.StartNode'
+                'Main-Class': 'com.dc.peer.StartApplication'
     }
     from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
     with jar

@@ -1,12 +1,23 @@
 package com.dc.peer;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.Scanner;
 import java.util.concurrent.ThreadLocalRandom;
 
-public class StartNode {
+public class StartApplication {
     public static void main(String[] args) {
-        int port = ThreadLocalRandom.current().nextInt(1050, 50000);
-        PeerNode node = new PeerNode("127.0.0.1",port,"node" + port);
+        // get the boot node to the session
+        InitConfig.setBootstrap_ip(args[0]);
+        int port = ThreadLocalRandom.current().nextInt(10000, 55555);
+        String address = null;
+        try {
+            address = InetAddress.getLocalHost().getHostAddress();
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+        }
+
+        Peer node = new Peer(address, port,"Node_" + address);
         Scanner in = new Scanner(System.in);
         while(true) {
             System.out.println("What you want to do?");
@@ -27,7 +38,7 @@ public class StartNode {
                 case 1:
                     System.out.println("Enter Search Query :");
                     String query = in.nextLine();
-                    node.searchFileQuery(query);
+                    node.searchFileQuery(query.toLowerCase());
                     break;
                 case 2:
                     System.out.println("Print File Names for a node.");
@@ -82,7 +93,7 @@ public class StartNode {
                     System.out.println(node.getForum().getPostList().toString());
 		case 11:
                     System.out.println("Leave the network.");
-                    node.leaveRequest();
+//                    node.leaveRequest();
                 default:
                     System.out.println("No matching input.");
             }

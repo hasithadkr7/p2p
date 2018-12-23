@@ -52,4 +52,17 @@ public class InitConfig {
         String result=query_set[index];
         return result;
     }
+
+    public static String getBootstrap_ip() {
+        return bootstrap_ip;
+    }
+
+    public static void setBootstrap_ip(String bootstrap_ip) {
+        if (bootstrap_ip.matches("[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}")) {
+            InitConfig.bootstrap_ip = bootstrap_ip;
+            return;
+        }
+        System.out.println("Invalid IP Address");
+
+    }
 }
