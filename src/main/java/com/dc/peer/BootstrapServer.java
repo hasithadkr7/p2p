@@ -3,6 +3,7 @@ package com.dc.peer;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
+import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -14,13 +15,13 @@ public class BootstrapServer {
     {
         DatagramSocket sock;
         String s;
-        List<Neighbour> nodes = new ArrayList();
+        List<com.dc.peer.Neighbour> nodes = new ArrayList();
 
         try
         {
             sock = new DatagramSocket(55555);
 
-            echo("Bootstrap Server created at 55555. Waiting for incoming data...");
+            echo("Bootstrap Server ( "+ InetAddress.getLocalHost().getHostAddress() + ") created at 55555. Waiting for incoming data...");
 
             while(true)
             {

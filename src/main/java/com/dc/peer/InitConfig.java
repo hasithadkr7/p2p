@@ -6,7 +6,7 @@ public class InitConfig {
     static String my_ip = "127.0.0.1";
     static int my_port = 4132;
     static String my_username = "node1";
-    static String bootstrap_ip = "10.8.97.93";
+    static String bootstrap_ip = "127.0.0.1";
     static int bootstrap_port = 55555;
     static enum MessageType { MSG_REG, MSG_REGOK, MSG_UNROK, MSG_UNREG, MSG_JOINOK ,MSG_JOIN, MSG_LEAVE,MSG_LEAVEOK ,MSG_SER, MSG_SEROK, MSG_ERROR};
 
@@ -51,5 +51,18 @@ public class InitConfig {
         int index=(int) (Math.random()*(file_set.length-1));
         String result=query_set[index];
         return result;
+    }
+
+    public static String getBootstrap_ip() {
+        return bootstrap_ip;
+    }
+
+    public static void setBootstrap_ip(String bootstrap_ip) {
+        if (bootstrap_ip.matches("[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}")) {
+            InitConfig.bootstrap_ip = bootstrap_ip;
+            return;
+        }
+        System.out.println("Invalid IP Address");
+
     }
 }
