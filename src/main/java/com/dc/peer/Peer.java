@@ -79,7 +79,7 @@ public class Peer {
                                 String ip = chunks[3 + i].trim();
                                 int port = Integer.parseInt(chunks[4 + i].trim());
                                 Node node = new Node(ip, port);
-                                routingTable.add(node);
+                                //routingTable.add(node);
                                 sendJoinRequest(node);
 
                             }
@@ -105,11 +105,35 @@ public class Peer {
                         else if(command.equals("JOINOK")){
                             // here we should receive the sender's ip address and port so that we can update the routing table.
                             //0014 JOINOK 0
+                            //0014 JOINOK 0 64.12.123.190 432
                             int result = Integer.parseInt(chunks[2].trim());
+                            String ip = chunks[3].trim();
+                            int port = Integer.parseInt(chunks[4].trim());
+                            Node node = new Node(ip,port);
                             if (result==0){
                                 System.out.println("0 – successful");
+                                routingTable.add(node);
                             }else if (result==9999){
                                 System.out.println("9999 – error while adding new node to routing table");
+                            }
+                        }
+                        else if(command.equals("LEAVE")){
+                            //0028 LEAVE 64.12.123.190 432
+                            String ip = chunks[2].trim();
+                            int port = Integer.parseInt(chunks[3].trim());
+                            Node node = new Node(ip,port);
+                            String leaveOkMessageTmp = "";
+                            getRountingTable();
+                            if (routingTable.stream().anyMatch(node1 -> (node.getIp().equals(node1.getIp()) &&
+                                    node.getPort() == node1.getPort()))) {
+                                try {
+                                    routingTable.remove(node);
+                                    leaveOkMessageTmp = " LEAVEOK 0";
+                                }catch (Exception e){
+                                    leaveOkMessageTmp = " LEAVEOK 9999";
+                                }
+                                String leaveOkMessage = String.format("%04d", leaveOkMessageTmp.length() + 4)+ leaveOkMessageTmp;
+                                sendMessage(node,leaveOkMessage);
                             }
                         }
                         else if(command.equals("LEAVEOK")){
@@ -427,6 +451,7 @@ public class Peer {
             System.out.println("No rank info.");
         }
     }
+
 
     public void rankFile(String fileName, int rank){
         updateRanks(fileName,rank, this.node, this.node);
