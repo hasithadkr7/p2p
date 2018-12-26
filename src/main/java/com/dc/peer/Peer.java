@@ -88,7 +88,7 @@ public class Peer {
                             //0027 JOIN 64.12.123.190 432
                             String ip = chunks[2].trim();
                             int port = Integer.parseInt(chunks[3].trim());
-                            System.out.println("Join Request Came from - " + ip + ":" + port);
+//                            System.out.println("Join Request Came from - " + ip + ":" + port);
                             Node node = new Node(ip,port);
                             boolean success = false;
                             // need to prevent duplicate by not allowing node re added to routing table.
@@ -154,12 +154,15 @@ public class Peer {
                             Node node = new Node(ip, port);
                             String query = chunks[4].trim();
 //                            StringTokenizer st1 = new StringTokenizer(receivedMessage, "\"");
-//                            st1.nextToken().trim();
-                            String searchQuery = query.substring(1, query.length() - 1).toLowerCase();
+//                              st1.nextToken().trim();
+
+                            String[] temp = receivedMessage.split("\\%");
+                            String searchQuery = temp[1].trim();
+                            System.out.println(searchQuery + " Search Query");
 //                            st1.nextToken().trim();
                             int hopCount = -1;
                             if (null != chunks[5]) {
-                                hopCount = Integer.parseInt(chunks[5].trim());
+                                hopCount = Integer.parseInt(chunks[chunks.length - 1].trim());
                             }
                             int searchKey = getHashKey(node,searchQuery);
                             System.out.println("Search Query :" + searchQuery);
@@ -430,7 +433,10 @@ public class Peer {
         ArrayList<String> findings = findFileInList(searchQuery,this.filesList);
         if (findings.isEmpty()){
             //Forward search query.
+            int hashKey = getHashKey(this.node, searchQuery);
+            previousQueries.put(hashKey, searchQuery);
             forwardSearchQuery(this.node,searchQuery,0);
+
         }else {
             System.out.println("Files : "+findings.toString());
         }
@@ -527,7 +533,7 @@ public class Peer {
 
     private void forwardSearchQuery(Node node,String searchQuery,int hopCount){
         //0047 SER 129.82.62.142 5070 "Lord of the rings" 2
-        String newQueryMessageTmp = " SER "+node.getIp()+" "+node.getPort()+" \""+searchQuery+"\" "+String.format("%02d", hopCount+1);
+        String newQueryMessageTmp = " SER "+node.getIp()+" "+node.getPort()+" %"+searchQuery+"% "+String.format("%02d", hopCount+1);
         String newQueryMessage = String.format("%04d", newQueryMessageTmp.length() + 4)+ newQueryMessageTmp;
         broadcastMessage(newQueryMessage);
     }
@@ -584,11 +590,12 @@ public class Peer {
         ArrayList<String> findings = new ArrayList<String>();
 
         for(String fileName: fileList){
-            if (fileName.toLowerCase().contains(queryName)){
+            String loweCase = fileName.toLowerCase();
+            if (loweCase.contains(queryName)){
                 int similarityCount = 0;
                 String[] queryWords = queryName.split(" ");
                 for(String queryWord: queryWords){
-                    for(String fileWord:fileName.split(" ")){
+                    for(String fileWord:loweCase.split(" ")){
                         if (queryWord.equals(fileWord)){
                             similarityCount++;
                         }

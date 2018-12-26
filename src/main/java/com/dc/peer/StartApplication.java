@@ -33,6 +33,7 @@ public class StartApplication {
 	        System.out.println("11. Leave the network.");
 
             int selection = Integer.parseInt(in.nextLine().trim());
+
             switch (selection){
                 case 1:
                     System.out.println("Enter Search Query :");
@@ -95,6 +96,7 @@ public class StartApplication {
 //                    node.leaveRequest();
                 default:
                     System.out.println("No matching input.");
+                    continue;
             }
         }
     }
