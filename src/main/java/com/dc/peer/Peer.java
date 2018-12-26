@@ -80,7 +80,7 @@ public class Peer {
                                 int port = Integer.parseInt(chunks[4 + 2*i].trim());
                                 System.out.println(ip + port + i);
                                 Node node = new Node(ip, port);
-                                //routingTable.add(node);
+                                routingTable.add(node);
                                 sendJoinRequest(node);
 
                             }
@@ -113,7 +113,7 @@ public class Peer {
                             Node node = new Node(ip,port);
                             if (result==0){
                                 System.out.println("0 – successful");
-                                routingTable.add(node);
+//                                routingTable.add(node);
                             }else if (result==9999){
                                 System.out.println("9999 – error while adding new node to routing table");
                             }
