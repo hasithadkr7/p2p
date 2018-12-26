@@ -76,8 +76,8 @@ public class Peer {
                             }
                             System.out.println("PeerCount : "+peerCount);
                             for (int i = 0; i < peerCount; i++) {
-                                String ip = chunks[3 + i].trim();
-                                int port = Integer.parseInt(chunks[4 + i].trim());
+                                String ip = chunks[3 + 2*i].trim();
+                                int port = Integer.parseInt(chunks[4 + 2*i].trim());
                                 Node node = new Node(ip, port);
                                 //routingTable.add(node);
                                 sendJoinRequest(node);
