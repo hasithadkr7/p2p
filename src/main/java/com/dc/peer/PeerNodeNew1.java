@@ -155,7 +155,7 @@ public class PeerNodeNew1 {
                             Node node = new Node(ip,port);
                             StringTokenizer st1 = new StringTokenizer(receivedMessage, "\"");
                             st1.nextToken().trim();
-                            String searchQuery = st1.nextToken().trim();
+                            String searchQuery = st1.nextToken().trim().toLowerCase();
                             int hopCount = Integer.parseInt(st1.nextToken().trim());
                             int searchKey = getHashKey(node,searchQuery);
                             if (!previousQueries.containsKey(searchKey)){
@@ -617,7 +617,8 @@ public class PeerNodeNew1 {
 
     private ArrayList<String> findFileInList(String queryName,String[] fileList){
         ArrayList<String> findings = new ArrayList<String>();
-        for(String fileName: fileList){
+        for(String capfileName: fileList){
+            String fileName = capfileName.toLowerCase();
             if (fileName.contains(queryName)){
                 int similarityCount = 0;
                 String[] queryWords = queryName.split(" ");
@@ -629,7 +630,7 @@ public class PeerNodeNew1 {
                     }
                 }
                 if (similarityCount==queryWords.length){
-                    findings.add(fileName);
+                    findings.add(capfileName);
                 }
             }
         }

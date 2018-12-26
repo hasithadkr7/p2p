@@ -88,9 +88,9 @@ public class StartApplication {
                 case 10:
                     System.out.println("Current Forum :");
                     System.out.println(node.getForum().getPostList().toString());
-		case 11:
+		        case 11:
                     System.out.println("Leave the network.");
-                    node.leaveRequest();
+//                    node.leaveRequest();
                 default:
                     System.out.println("No matching input.");
             }
