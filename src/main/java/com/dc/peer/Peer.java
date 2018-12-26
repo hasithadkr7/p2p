@@ -47,7 +47,7 @@ public class Peer {
     }
 
 
-    public synchronized void listen() {
+    public void listen() {
         (new Thread() {
             @Override
             public void run() {
