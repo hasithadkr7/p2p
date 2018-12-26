@@ -8,6 +8,7 @@ p2p.iml
 p2p.ipr
 p2p.iws
 .gradle
+build/libs/PeerNode-1.0-SNAPSHOT.jar
 build
 build/classes
 build/tmp
