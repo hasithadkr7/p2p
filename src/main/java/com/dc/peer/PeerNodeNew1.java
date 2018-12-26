@@ -1,17 +1,15 @@
-package  com.dc.peer;
-
+package com.dc.peer;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.dc.peer.model.Comment;
 import com.dc.peer.model.Forum;
 import com.dc.peer.model.Post;
 import com.dc.peer.model.Rank;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 
 import java.io.IOException;
 import java.net.*;
 import java.text.DecimalFormat;
 import java.util.*;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -33,16 +31,16 @@ public class PeerNodeNew1 {
     private DatagramSocket sendSocket;
 
 
-    public PeerNodeNew1(String my_ip, int my_port, String my_username) {
+    public PeerNodeNew1(String bootIp, String my_ip, int my_port, String my_getUserName) {
         nodeSelf = new Node(my_ip, my_port);
         createSendSocket();
-        nodeSelf.setUserName(my_username);
+        nodeSelf.setUserName(my_getUserName);
         try {
             listenerSocket = new DatagramSocket(my_port);
             routingTable = new ArrayList<Node>();
             filesList = InitConfig.getRandomFiles();
             getFilesList();
-            sendRegisterRequest();
+            sendRegisterRequest(bootIp);
             listen();
         } catch (SocketException e) {
             e.printStackTrace();
@@ -342,8 +340,8 @@ public class PeerNodeNew1 {
         }
     }
 
-    private void sendMessageToBootsStrapServer(String message){
-        sendMessage(new Node(InitConfig.bootstrap_ip,InitConfig.bootstrap_port), message);
+    private void sendMessageToBootsStrapServer(String bootIp, String message){
+        sendMessage(new Node(bootIp ,InitConfig.bootstrap_port), message);
     }
 
     private void broadcastMessage(String message){
@@ -374,7 +372,7 @@ public class PeerNodeNew1 {
         String leaveRequestMessage = String.format("%04d", leaveRequestMessageTmp.length() + 4)+ leaveRequestMessageTmp;
         System.out.println("leaveRequestMessage: "+leaveRequestMessage);
         try {
-            sendMessageToBootsStrapServer(leaveRequestMessage);
+//            sendMessageToBootsStrapServer(bleaveRequestMessage);
             broadcastMessage(leaveRequestMessage); // broadcast leave message to the neighbours.
             //leaveNetwork(); // send join requests to the neighbours.
             leaveRequestCount++;
@@ -611,11 +609,11 @@ public class PeerNodeNew1 {
         sendMessage(node,joinOkMessage);
     }
 
-    private void sendRegisterRequest(){
+    private void sendRegisterRequest(String bootIp){
         String register_message_tmp = " REG " + this.nodeSelf.getIp() + " " + this.nodeSelf.getPort() + " " + this.nodeSelf.getUserName();
         String register_message = String.format("%04d", register_message_tmp.length() + 4)+ register_message_tmp;
         System.out.println("register_message: "+register_message);
-        sendMessageToBootsStrapServer(register_message);
+        sendMessageToBootsStrapServer(bootIp, register_message);
     }
 
     private ArrayList<String> findFileInList(String queryName,String[] fileList){
