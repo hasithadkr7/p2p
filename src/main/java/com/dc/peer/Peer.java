@@ -563,9 +563,9 @@ public class Peer {
         //0014 JOINOK 0
         String joinOkMessageTmp = "";
         if (success==true){
-            joinOkMessageTmp = " JOINOK 0";
+            joinOkMessageTmp = " JOINOK 0 "+this.node.getIp()+" "+this.node.getPort();
         }else {
-            joinOkMessageTmp = " JOINOK 9999";
+            joinOkMessageTmp = " JOINOK 9999 "+this.node.getIp()+" "+this.node.getPort();
         }
         String joinOkMessage = String.format("%04d", joinOkMessageTmp.length() + 4)+ joinOkMessageTmp;
         System.out.println("joinOkMessageTmp: "+joinOkMessage);
