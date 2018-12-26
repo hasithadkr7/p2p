@@ -61,7 +61,6 @@ public class Peer {
                         String receivedMessage = new String(data, 0, receivePacket.getLength());
                         System.out.println("listen|port: "+ node.getPort()+"|receivedMessage : "+receivedMessage);
 
-                        StringTokenizer st = new StringTokenizer(receivedMessage, " ");
                         String[] chunks = StringUtils.split(receivedMessage, " ");
                         String length = chunks[0]; // total length of the message.
                         String command = chunks[1]; // Command in the message
@@ -80,11 +79,10 @@ public class Peer {
                                 String ip = chunks[3 + i].trim();
                                 int port = Integer.parseInt(chunks[4 + i].trim());
                                 Node node = new Node(ip, port);
-                                routingTable.add(node);
+                                //routingTable.add(node);
                                 sendJoinRequest(node);
 
                             }
-
                         }
                         else if(command.equals("JOIN")){
                             //0027 JOIN 64.12.123.190 432
@@ -107,11 +105,35 @@ public class Peer {
                         else if(command.equals("JOINOK")){
                             // here we should receive the sender's ip address and port so that we can update the routing table.
                             //0014 JOINOK 0
+                            //0014 JOINOK 0 64.12.123.190 432
                             int result = Integer.parseInt(chunks[2].trim());
+                            String ip = chunks[3].trim();
+                            int port = Integer.parseInt(chunks[4].trim());
+                            Node node = new Node(ip,port);
                             if (result==0){
                                 System.out.println("0 – successful");
+                                routingTable.add(node);
                             }else if (result==9999){
                                 System.out.println("9999 – error while adding new node to routing table");
+                            }
+                        }
+                        else if(command.equals("LEAVE")){
+                            //0028 LEAVE 64.12.123.190 432
+                            String ip = chunks[2].trim();
+                            int port = Integer.parseInt(chunks[3].trim());
+                            Node node = new Node(ip,port);
+                            String leaveOkMessageTmp = "";
+                            getRountingTable();
+                            if (routingTable.stream().anyMatch(node1 -> (node.getIp().equals(node1.getIp()) &&
+                                    node.getPort() == node1.getPort()))) {
+                                try {
+                                    routingTable.remove(node);
+                                    leaveOkMessageTmp = " LEAVEOK 0";
+                                }catch (Exception e){
+                                    leaveOkMessageTmp = " LEAVEOK 9999";
+                                }
+                                String leaveOkMessage = String.format("%04d", leaveOkMessageTmp.length() + 4)+ leaveOkMessageTmp;
+                                sendMessage(node,leaveOkMessage);
                             }
                         }
                         else if(command.equals("LEAVEOK")){
@@ -124,7 +146,7 @@ public class Peer {
                                 leaveRequest();
                             }
                         }
-                        else if(command.equals("SER") && st.hasMoreTokens()){
+                        else if(command.equals("SER")){
                             //0047 SER 129.82.62.142 5070 "Lord of the rings" 2
                             String ip = chunks[2].trim();
                             int port = Integer.parseInt(chunks[3].trim());
@@ -245,7 +267,7 @@ public class Peer {
                             }
                             //post id+Comment+creator id
                         }
-                        else if(command.equals("POST_RANK") && st.hasMoreTokens()){
+                        else if(command.equals("POST_RANK")){
                             //<<length>> POST_RANK|<<post_id>>|<<rank>>|<<timestamp>>|<<node_id>>
                             //0031 POST_RANK |0|4|2|node35685|sender node
                             StringTokenizer tokenizer = new StringTokenizer(receivedMessage, "|");
@@ -301,15 +323,7 @@ public class Peer {
     private void broadcastMessage(String message){
         for (int i = 0; i < this.routingTable.size(); i++) {
             Node neighbour = this.routingTable.get(i);
-            try {
-                InetAddress ip = InetAddress.getByName(neighbour.getIp());
-                DatagramPacket sendPacket = new DatagramPacket(message.getBytes(), message.length(),ip,neighbour.getPort());
-                listenerSocket.send(sendPacket);
-            } catch (UnknownHostException e) {
-                e.printStackTrace();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            sendMessage(neighbour,message);
         }
     }
 
@@ -438,6 +452,7 @@ public class Peer {
         }
     }
 
+
     public void rankFile(String fileName, int rank){
         updateRanks(fileName,rank, this.node, this.node);
     }
@@ -506,15 +521,7 @@ public class Peer {
         String joinRequestMessageTmp = " JOIN " + this.node.getIp() + " " + this.node.getPort();
         String joinRequestMessage = String.format("%04d", joinRequestMessageTmp.length() + 4)+joinRequestMessageTmp;
         System.out.println("joinRequestMessage: "+joinRequestMessage);
-        try {
-            InetAddress ip = InetAddress.getByName(node.getIp());
-            DatagramPacket sendPacket = new DatagramPacket(joinRequestMessage.getBytes(), joinRequestMessage.length(),ip,node.getPort());
-            listenerSocket.send(sendPacket);
-        } catch (UnknownHostException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        sendMessage(node,joinRequestMessage);
     }
 
     private void forwardSearchQuery(Node node,String searchQuery,int hopCount){
@@ -549,52 +556,27 @@ public class Peer {
                 +" "+hopCount+" "+findingsStr;
         String searchOkMessage = String.format("%04d", searchOkMessageTmp.length() + 4)+ searchOkMessageTmp;
         System.out.println("searchOkMessage: "+searchOkMessage);
-        try {
-            InetAddress ip = InetAddress.getByName(node.getIp());
-            DatagramPacket sendPacket = new DatagramPacket(searchOkMessage.getBytes(), searchOkMessage.length(),ip,node.getPort());
-            listenerSocket.send(sendPacket);
-        } catch (UnknownHostException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        sendMessage(node,searchOkMessage);
     }
 
     private void sendJoinOk(Node node, boolean success){
         //0014 JOINOK 0
         String joinOkMessageTmp = "";
         if (success==true){
-            joinOkMessageTmp = " JOINOK 0";
+            joinOkMessageTmp = " JOINOK 0 "+this.node.getIp()+" "+this.node.getPort();
         }else {
-            joinOkMessageTmp = " JOINOK 9999";
+            joinOkMessageTmp = " JOINOK 9999 "+this.node.getIp()+" "+this.node.getPort();
         }
         String joinOkMessage = String.format("%04d", joinOkMessageTmp.length() + 4)+ joinOkMessageTmp;
         System.out.println("joinOkMessageTmp: "+joinOkMessage);
-        try {
-            InetAddress ip = InetAddress.getByName(node.getIp());
-            DatagramPacket sendPacket = new DatagramPacket(joinOkMessage.getBytes(), joinOkMessage.length(),ip,node.getPort());
-            listenerSocket.send(sendPacket);
-        } catch (UnknownHostException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        sendMessage(node,joinOkMessage);
     }
 
     private void sendRegisterRequest(){
         String register_message_tmp = " REG " + this.node.getIp() + " " + this.node.getPort() + " " + this.node.getUserName();
         String register_message = String.format("%04d", register_message_tmp.length() + 4)+ register_message_tmp;
         System.out.println("register_message: "+register_message);
-        try {
-            InetAddress bootIp = InetAddress.getByName(InitConfig.bootstrap_ip);
-            DatagramPacket sendPacket = new DatagramPacket(register_message.getBytes(), register_message.length(),bootIp,InitConfig.bootstrap_port);
-            System.out.println("Bootstrap IP " + bootIp);
-            listenerSocket.send(sendPacket);
-        } catch (UnknownHostException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        sendMessage(new Node(InitConfig.bootstrap_ip,InitConfig.bootstrap_port),register_message);
     }
 
     private ArrayList<String> findFileInList(String queryName,String[] fileList){
@@ -619,6 +601,17 @@ public class Peer {
         return findings;
     }
 
+    private void sendMessage(Node node, String message){
+        try {
+            InetAddress ip = InetAddress.getByName(node.getIp());
+            DatagramPacket sendPacket = new DatagramPacket(message.getBytes(), message.length(),ip,node.getPort());
+            listenerSocket.send(sendPacket);
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
     public void getFilesList() {
         System.out.println("----------------------------------------------------------------------------");

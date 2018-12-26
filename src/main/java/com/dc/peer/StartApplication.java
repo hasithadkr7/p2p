@@ -16,7 +16,6 @@ public class StartApplication {
         } catch (UnknownHostException e) {
             e.printStackTrace();
         }
-
         Peer node = new Peer(address, port,"Node_" + address);
         Scanner in = new Scanner(System.in);
         while(true) {
@@ -91,7 +90,7 @@ public class StartApplication {
                 case 10:
                     System.out.println("Current Forum :");
                     System.out.println(node.getForum().getPostList().toString());
-		case 11:
+		        case 11:
                     System.out.println("Leave the network.");
 //                    node.leaveRequest();
                 default:
