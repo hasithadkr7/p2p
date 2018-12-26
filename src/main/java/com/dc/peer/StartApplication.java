@@ -30,7 +30,7 @@ public class StartApplication {
             System.out.println("8. Comment on forum post.");
             System.out.println("9. Rank a Forum Post");
             System.out.println("10. View the Forum.");
-	    System.out.println("11. Leave the network.");
+	        System.out.println("11. Leave the network.");
 
             int selection = Integer.parseInt(in.nextLine().trim());
             switch (selection){

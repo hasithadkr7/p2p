@@ -47,7 +47,7 @@ public class Peer {
     }
 
 
-    public void listen() {
+    public synchronized void listen() {
         (new Thread() {
             @Override
             public void run() {
@@ -67,8 +67,7 @@ public class Peer {
                         System.out.println("Command : "+ command);
                         if (command.equals("REGOK")) {
                             //0051 REGOK 2 129.82.123.45 5001 64.12.123.190 34001
-                            String neighbourCount = chunks[2].trim();
-                            int peerCount = Integer.parseInt(neighbourCount);
+                            int peerCount = Integer.parseInt(chunks[2].trim());
                             // handle count of 9998 and 9997.
                             if (peerCount == 9998 || peerCount == 9997) {
                                 System.out.println("Registration Cancelled");
@@ -678,7 +677,7 @@ public class Peer {
         } catch (UnknownHostException e) {
             e.printStackTrace();
         }
-        return sendSocket;
+        return listenerSocket;
     }
 }
 
