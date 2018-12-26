@@ -670,7 +670,7 @@ public class Peer {
 
     private DatagramSocket createReceiveSocket() {
         try {
-            listenerSocket = new DatagramSocket();
+            listenerSocket = new DatagramSocket(this.node.getPort());
         } catch (SocketException e) {
             e.printStackTrace();
         }
