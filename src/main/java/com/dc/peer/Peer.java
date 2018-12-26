@@ -87,8 +87,9 @@ public class Peer {
                         }
                         else if(command.equals("JOIN")){
                             //0027 JOIN 64.12.123.190 432
-                            String ip = chunks[2].trim(); //st.nextToken();
+                            String ip = chunks[2].trim();
                             int port = Integer.parseInt(chunks[3].trim());
+                            System.out.println("Join Request Came from - " + ip + ":" + port);
                             Node node = new Node(ip,port);
                             boolean success = false;
                             // need to prevent duplicate by not allowing node re added to routing table.
