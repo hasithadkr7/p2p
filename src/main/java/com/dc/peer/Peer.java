@@ -30,20 +30,22 @@ public class Peer {
     private static DecimalFormat df2 = new DecimalFormat(".##");
     private Forum forum = new Forum(); // is a JSON Array
     private int timestamp = 0;
-    private DatagramSocket sendSocket;
 
 
     public Peer(String my_ip, int my_port, String my_username) {
         System.out.println("Creating Node with Name :" + my_username);
         node = new Node(my_ip, my_port);
         node.setUserName(my_username);
-        createSendSocket();
-        createReceiveSocket(my_ip, my_port);
-        filesList = InitConfig.getRandomFiles();
-        routingTable = new ArrayList();
-        getFilesList();
-        sendRegisterRequest();
-        listen();
+        try {
+            listenerSocket = new DatagramSocket(my_port);
+            filesList = InitConfig.getRandomFiles();
+            routingTable = new ArrayList();
+            getFilesList();
+            sendRegisterRequest();
+            listen();
+        } catch (SocketException e) {
+            e.printStackTrace();
+        }
     }
 
 
@@ -430,6 +432,8 @@ public class Peer {
         if (findings.isEmpty()){
             //Forward search query.
             forwardSearchQuery(this.node,searchQuery,0);
+            int hashKey = getHashKey(this.node,searchQuery);
+            previousQueries.put(hashKey,searchQuery);
         }else {
             System.out.println("Files : "+findings.toString());
         }
@@ -658,25 +662,5 @@ public class Peer {
         this.forum = forum;
     }
 
-    private DatagramSocket createSendSocket() {
-        try {
-            sendSocket = new DatagramSocket();
-        } catch (SocketException e) {
-            e.printStackTrace();
-        }
-        return sendSocket;
-    }
-
-    private DatagramSocket createReceiveSocket(String ip, int port) {
-        try {
-            InetAddress inetAddress = InetAddress.getByName(ip);
-            listenerSocket = new DatagramSocket(port, inetAddress);
-        } catch (SocketException e) {
-            e.printStackTrace();
-        } catch (UnknownHostException e) {
-            e.printStackTrace();
-        }
-        return sendSocket;
-    }
 }
 
