@@ -15,7 +15,7 @@ public class BootstrapServer {
     {
         DatagramSocket sock;
         String s;
-        List<Neighbour> nodes = new ArrayList();
+        List<com.dc.peer.Neighbour> nodes = new ArrayList();
 
         try
         {
