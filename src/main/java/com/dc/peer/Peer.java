@@ -38,7 +38,7 @@ public class Peer {
         node = new Node(my_ip, my_port);
         node.setUserName(my_username);
         createSendSocket();
-        createReceiveSocket(my_ip, my_port);
+        createReceiveSocket();
         filesList = InitConfig.getRandomFiles();
         routingTable = new ArrayList();
         getFilesList();
@@ -668,13 +668,10 @@ public class Peer {
         return sendSocket;
     }
 
-    private DatagramSocket createReceiveSocket(String ip, int port) {
+    private DatagramSocket createReceiveSocket() {
         try {
-            InetAddress inetAddress = InetAddress.getByName(ip);
-            listenerSocket = new DatagramSocket(port, inetAddress);
+            listenerSocket = new DatagramSocket();
         } catch (SocketException e) {
-            e.printStackTrace();
-        } catch (UnknownHostException e) {
             e.printStackTrace();
         }
         return listenerSocket;
