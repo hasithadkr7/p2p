@@ -10,12 +10,12 @@ public class StartApplication {
         // get the boot node to the session
         InitConfig.setBootstrap_ip(args[0]);
         int port = ThreadLocalRandom.current().nextInt(10000, 55555);
-        String address = null;
-        try {
-            address = InetAddress.getLocalHost().getHostAddress();
-        } catch (UnknownHostException e) {
-            e.printStackTrace();
-        }
+        String address = args[1];
+//        try {
+//            address = InetAddress.getLocalHost().getHostAddress();
+//        } catch (UnknownHostException e) {
+//            e.printStackTrace();
+//        }
         Peer node = new Peer(address, port,"Node_" + address);
         Scanner in = new Scanner(System.in);
         while(true) {

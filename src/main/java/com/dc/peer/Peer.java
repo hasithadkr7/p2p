@@ -156,12 +156,16 @@ public class Peer {
                             String query = chunks[4].trim();
 //                            StringTokenizer st1 = new StringTokenizer(receivedMessage, "\"");
 //                            st1.nextToken().trim();
-                            String searchQuery = query.substring(1, query.length() - 1).toLowerCase();
+//                            String searchQuery = query.substring(1, query.length() - 1).toLowerCase();
 //                            st1.nextToken().trim();
-                            int hopCount = -1;
-                            if (null != chunks[5]) {
-                                hopCount = Integer.parseInt(chunks[5].trim());
-                            }
+                            StringTokenizer st1 = new StringTokenizer(receivedMessage, "\"");
+                            st1.nextToken().trim();
+                            String searchQuery = st1.nextToken().trim().toLowerCase();
+                            int hopCount = Integer.parseInt(st1.nextToken().trim());
+//                            int hopCount = -1;
+//                            if (null != chunks[5]) {
+//                                hopCount = Integer.parseInt(chunks[5].trim());
+//                            }
                             int searchKey = getHashKey(node,searchQuery);
                             System.out.println("Search Query :" + searchQuery);
                             if (!previousQueries.containsKey(searchKey)){
@@ -586,8 +590,9 @@ public class Peer {
     private ArrayList<String> findFileInList(String queryName,String[] fileList){
         ArrayList<String> findings = new ArrayList<String>();
 
-        for(String fileName: fileList){
-            if (fileName.toLowerCase().contains(queryName)){
+        for(String capFileName: fileList){
+            String fileName = capFileName.toLowerCase();
+            if (fileName.contains(queryName)){
                 int similarityCount = 0;
                 String[] queryWords = queryName.split(" ");
                 for(String queryWord: queryWords){
@@ -598,14 +603,32 @@ public class Peer {
                     }
                 }
                 if (similarityCount==queryWords.length){
-                    findings.add(fileName);
+                    findings.add(capFileName);
                 }
             }
         }
         return findings;
     }
 
-    private void sendMessage(Node node, String message){
+
+    private synchronized void sendMessage(Node node, String message) {
+        (new Thread() {
+            @Override
+            public void run() {
+                try {
+                    InetAddress ip = InetAddress.getByName(node.getIp());
+                    DatagramPacket sendPacket = new DatagramPacket(message.getBytes(), message.length(),ip,node.getPort());
+                    listenerSocket.send(sendPacket);
+                } catch (UnknownHostException e) {
+                    e.printStackTrace();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }).start();
+    }
+
+    /*private void sendMessage(Node node, String message){
         try {
             InetAddress ip = InetAddress.getByName(node.getIp());
             DatagramPacket sendPacket = new DatagramPacket(message.getBytes(), message.length(),ip,node.getPort());
@@ -615,7 +638,7 @@ public class Peer {
         } catch (IOException e) {
             e.printStackTrace();
         }
-    }
+    }*/
 
     public void getFilesList() {
         System.out.println("----------------------------------------------------------------------------");
