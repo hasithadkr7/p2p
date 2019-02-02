@@ -7,7 +7,6 @@ import com.dc.peer.model.Rank;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang3.StringUtils;
 
-
 import java.io.IOException;
 import java.net.*;
 import java.text.DecimalFormat;
@@ -154,18 +153,10 @@ public class Peer {
                             int port = Integer.parseInt(chunks[3].trim());
                             Node node = new Node(ip, port);
                             String query = chunks[4].trim();
-//                            StringTokenizer st1 = new StringTokenizer(receivedMessage, "\"");
-//                            st1.nextToken().trim();
-//                            String searchQuery = query.substring(1, query.length() - 1).toLowerCase();
-//                            st1.nextToken().trim();
                             StringTokenizer st1 = new StringTokenizer(receivedMessage, "\"");
                             st1.nextToken().trim();
                             String searchQuery = st1.nextToken().trim().toLowerCase();
                             int hopCount = Integer.parseInt(st1.nextToken().trim());
-//                            int hopCount = -1;
-//                            if (null != chunks[5]) {
-//                                hopCount = Integer.parseInt(chunks[5].trim());
-//                            }
                             int searchKey = getHashKey(node,searchQuery);
                             System.out.println("Search Query :" + searchQuery);
                             if (!previousQueries.containsKey(searchKey)){
@@ -349,7 +340,7 @@ public class Peer {
         // post content should be validated.
         timestamp++;
         // an empty Json is created. Now let's add this to the forum
-        //forum.addPost(postObj); // order has to be preserved.
+        // order has to be preserved.
         if (forum.postExist(post)) {
             forum.updatePost(post);
         } else {
@@ -627,18 +618,6 @@ public class Peer {
             }
         }).start();
     }
-
-    /*private void sendMessage(Node node, String message){
-        try {
-            InetAddress ip = InetAddress.getByName(node.getIp());
-            DatagramPacket sendPacket = new DatagramPacket(message.getBytes(), message.length(),ip,node.getPort());
-            listenerSocket.send(sendPacket);
-        } catch (UnknownHostException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }*/
 
     public void getFilesList() {
         System.out.println("----------------------------------------------------------------------------");
